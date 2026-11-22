@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowUpRight, Award, Crown, X } from 'lucide-react';
+import '../vanguardHero.css';
 
 const NAV_LINKS = ['Projects', 'Studio', 'Offerings', 'Inquire'];
 

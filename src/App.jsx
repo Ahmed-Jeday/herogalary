@@ -10,11 +10,12 @@ import { PAL } from './data/movies';
 import { blip, setSfxEnabled } from './audio/sfx';
 import { useCatalog } from './store/useCatalog';
 import ComicVault from './components/ComicVault';
-import vanguardhero from './components/vanguard-hero';
 import ChatRooms from './components/ChatRooms';
+import VanguardHero from './components/vanguard-hero';
+
+const SECTIONS = ['Vanguard', 'Films', 'Comics', 'Chat'];
 
 export default function App() {
-  
   const engineRef = useRef(null);
 
   const [overlayIdx, setOverlayIdx] = useState(null);
@@ -22,7 +23,7 @@ export default function App() {
   const [toastVisible, setToastVisible] = useState(false);
   const [sfxOn, setSfxOn] = useState(false);
   const [paletteName, setPaletteName] = useState('GREEN');
-  const [comicVaultVisible, setComicVaultVisible] = useState(false);
+  const [activeSection, setActiveSection] = useState(1);
 
   // refs miroirs (évite les setState avec effets de bord)
   const sfxOnRef = useRef(false);
@@ -83,19 +84,17 @@ export default function App() {
 
   /* --------------------------- render ------------------------------ */
   return (
-    
     <>
-     
-     
+      {activeSection === 0 && <VanguardHero />}
+
       <main
-        className={`movie-catalog${comicVaultVisible ? ' movie-catalog--hidden' : ''}`}
-        aria-hidden={comicVaultVisible}
-        inert={comicVaultVisible}
+        className={`movie-catalog${activeSection !== 1 ? ' movie-catalog--hidden' : ''}`}
+        aria-hidden={activeSection !== 1}
+        inert={activeSection !== 1}
       >
         <Scene engineRef={engineRef} onOpenExperiment={handleOpenExperiment} />
 
         <Nav onGrid={toggleGrid} />
-         <vanguardhero />
 
         <Logo />
 
@@ -113,18 +112,38 @@ export default function App() {
         />
       </main>
 
-      <button
-        className={`section-switch ${comicVaultVisible ? 'section-switch--up' : 'section-switch--down'}`}
-        type="button"
-        aria-label={comicVaultVisible ? 'Revenir au catalogue de films' : 'Aller à Comic Vault'}
-        onClick={() => setComicVaultVisible(visible => !visible)}
-      >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <path d={comicVaultVisible ? 'M10 15V5M5 10l5-5 5 5' : 'M10 5v10m-5-5 5 5 5-5'} />
-        </svg>
-      </button>
+      {activeSection === 2 && <ComicVault />}
+      {activeSection === 3 && (
+        <div className="chat-section">
+          <ChatRooms />
+        </div>
+      )}
 
-      {comicVaultVisible && <ComicVault />}
+      <nav className="section-navigation" aria-label="Navigation entre les sections">
+        <button
+          type="button"
+          aria-label={activeSection > 0 ? `Section précédente : ${SECTIONS[activeSection - 1]}` : 'Première section'}
+          disabled={activeSection === 0}
+          onClick={() => setActiveSection(section => Math.max(0, section - 1))}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M15 10H5m5 5-5-5 5-5" />
+          </svg>
+        </button>
+        <span aria-live="polite">
+          {String(activeSection + 1).padStart(2, '0')} / {String(SECTIONS.length).padStart(2, '0')} · {SECTIONS[activeSection]}
+        </span>
+        <button
+          type="button"
+          aria-label={activeSection < SECTIONS.length - 1 ? `Section suivante : ${SECTIONS[activeSection + 1]}` : 'Dernière section'}
+          disabled={activeSection === SECTIONS.length - 1}
+          onClick={() => setActiveSection(section => Math.min(SECTIONS.length - 1, section + 1))}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M5 10h10m-5-5 5 5-5 5" />
+          </svg>
+        </button>
+      </nav>
     </>
   );
 }
