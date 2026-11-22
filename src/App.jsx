@@ -85,7 +85,7 @@ export default function App() {
   /* --------------------------- render ------------------------------ */
   return (
     <>
-      {activeSection === 0 && <VanguardHero />}
+      {activeSection === 0 && <VanguardHero onNavigateSection={setActiveSection} />}
 
       <main
         className={`movie-catalog${activeSection !== 1 ? ' movie-catalog--hidden' : ''}`}
