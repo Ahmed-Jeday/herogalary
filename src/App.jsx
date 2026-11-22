@@ -10,6 +10,7 @@ import { PAL } from './data/movies';
 import { blip, setSfxEnabled } from './audio/sfx';
 import { useCatalog } from './store/useCatalog';
 import ComicVault from './components/ComicVault';
+import vanguardhero from './components/vanguard-hero';
 
 export default function App() {
   
@@ -82,6 +83,7 @@ export default function App() {
   /* --------------------------- render ------------------------------ */
   return (
     <>
+     
       <main
         className={`movie-catalog${comicVaultVisible ? ' movie-catalog--hidden' : ''}`}
         aria-hidden={comicVaultVisible}
@@ -90,6 +92,7 @@ export default function App() {
         <Scene engineRef={engineRef} onOpenExperiment={handleOpenExperiment} />
 
         <Nav onGrid={toggleGrid} />
+         <vanguardhero />
 
         <Logo />
 
