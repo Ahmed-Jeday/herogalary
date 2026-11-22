@@ -19,15 +19,25 @@ html,body{
   visibility:hidden;
   pointer-events:none;
 }
-.section-switch{
-  position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
-  z-index:80;width:44px;height:44px;display:flex;align-items:center;justify-content:center;
-  border:1px solid currentColor;border-radius:50%;background:rgba(15,14,20,.82);
-  color:var(--txt);cursor:pointer;transition:background .2s,color .2s,transform .2s;
+.section-navigation{
+  position:fixed;left:50%;bottom:14px;transform:translateX(-50%);
+  z-index:80;display:flex;align-items:center;gap:12px;padding:5px 9px;
+  border:1px solid rgba(231,228,238,.3);border-radius:999px;
+  background:rgba(15,14,20,.86);color:var(--txt);
+  font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
 }
-.section-switch:hover{background:var(--txt);color:var(--base)}
-.section-switch:focus-visible{outline:2px solid currentColor;outline-offset:4px}
-.section-switch svg{stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.section-navigation button{
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(231,228,238,.24);border-radius:50%;
+  background:transparent;color:inherit;cursor:pointer;transition:background .2s,color .2s,opacity .2s;
+}
+.section-navigation button:hover:not(:disabled){background:var(--txt);color:var(--base)}
+.section-navigation button:disabled{opacity:.35;cursor:not-allowed}
+.section-navigation button:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+.section-navigation svg{stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.chat-section{height:calc(100dvh - 64px);overflow:hidden}
+.chat-section .vc-chat{height:100%;min-height:0}
 #gl{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;touch-action:none}
 
 .sm{font-size:max(9px,.74vw);letter-spacing:.04em;text-transform:uppercase}
@@ -243,7 +253,9 @@ html,body{
 
 /* ---------- responsive ---------- */
 @media (max-width:760px){
-  .section-switch{bottom:12px}
+  .section-navigation{bottom:8px;gap:8px;padding:4px 7px}
+  .section-navigation button{width:34px;height:34px}
+  .chat-section{height:calc(100dvh - 56px)}
   #n-lab,#n-talk{display:none}
   #n-list{left:6%;top:4.5%}
   #n-about{left:auto;right:6%;top:4.5%}
