@@ -96,6 +96,7 @@ export default function App() {
         <Scene engineRef={engineRef} onOpenExperiment={handleOpenExperiment} />
 
         <Nav onGrid={toggleGrid} />
+         <vanguardhero />
 
         <Logo />
 
