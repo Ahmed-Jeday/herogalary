@@ -11,6 +11,7 @@ import { blip, setSfxEnabled } from './audio/sfx';
 import { useCatalog } from './store/useCatalog';
 import ComicVault from './components/ComicVault';
 import vanguardhero from './components/vanguard-hero';
+import ChatRooms from './components/ChatRooms';
 
 export default function App() {
   
@@ -82,7 +83,9 @@ export default function App() {
 
   /* --------------------------- render ------------------------------ */
   return (
+    
     <>
+     
      
       <main
         className={`movie-catalog${comicVaultVisible ? ' movie-catalog--hidden' : ''}`}
