@@ -1,0 +1,7 @@
+.env
+node_modules/
+keys/
+.agents/
+.claude/
+.cursor/
+.devin/

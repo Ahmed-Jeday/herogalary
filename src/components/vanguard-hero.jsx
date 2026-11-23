@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowUpRight, Award, Crown, X } from 'lucide-react';
+import { logout } from '../api/authApi';
 import '../vanguardHero.css';
 
 const NAV_LINKS = [
@@ -19,17 +20,49 @@ function Brand({ className = '' }) {
   );
 }
 
-function GetInTouchButton({ className = '', onNavigateSection }) {
+function GetInTouchButton({ className = '' }) {
+  const [username, setUsername] = useState(() =>
+    localStorage.getItem('heroverse.isLoggedIn') === 'true'
+      ? localStorage.getItem('heroverse.username')
+      : null,
+  );
+
+  async function handleLogout() {
+    try {
+      await logout();
+    } catch {
+      // Token expiré ou API indisponible : on nettoie la session locale quand même.
+    } finally {
+      localStorage.removeItem('heroverse.isLoggedIn');
+      localStorage.removeItem('heroverse.username');
+      setUsername(null);
+      window.location.assign('/');
+    }
+  }
+
+  if (username) {
+    return (
+      <div
+        className={`group inline-flex items-center gap-4 border border-white/30 px-5 py-3 text-xs uppercase tracking-widest text-white ${className}`}
+      >
+        <span className="font-inter">{username}</span>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="font-inter text-[10px] uppercase tracking-widest text-white/60 transition hover:text-white"
+        >
+          Déconnexion
+        </button>
+      </div>
+    );
+  }
+
   return (
     <a
-      href="#chat"
-      onClick={(event) => {
-        event.preventDefault();
-        onNavigateSection(3);
-      }}
+      href="/auth-preview.html?mode=signup"
       className={`group inline-flex items-center gap-2 border border-white/30 px-6 py-3 text-xs uppercase tracking-widest text-white transition hover:border-white/60 hover:bg-white/10 ${className}`}
     >
-      Join the Community
+      Create account
       <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
     </a>
   );
@@ -70,7 +103,7 @@ export default function VanguardHero({ onNavigateSection }) {
             ))}
           </div>
 
-          <GetInTouchButton className="hidden md:inline-flex" onNavigateSection={onNavigateSection} />
+          <GetInTouchButton className="hidden md:inline-flex" />
 
           <button
             type="button"
@@ -186,7 +219,7 @@ export default function VanguardHero({ onNavigateSection }) {
               transform: menuOpen ? 'translateY(0)' : 'translateY(20px)',
             }}
           >
-            <GetInTouchButton onNavigateSection={onNavigateSection} />
+            <GetInTouchButton />
           </div>
         </div>
       </div>

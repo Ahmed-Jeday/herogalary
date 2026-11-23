@@ -13,6 +13,7 @@ import ComicVault from './components/ComicVault';
 import ChatRooms from './components/ChatRooms';
 import VanguardHero from './components/vanguard-hero';
 
+
 const SECTIONS = ['Vanguard', 'Films', 'Comics', 'Chat'];
 
 export default function App() {

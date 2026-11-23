@@ -1,0 +1,75 @@
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: heroverse-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      POSTGRES_DB: ${POSTGRES_DB:-heroverse_auth}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-heroverse_auth}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - heroverse-network
+    restart: unless-stopped
+
+  auth-migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: heroverse-auth-migrate
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-admin123}@postgres:5432/${POSTGRES_DB:-heroverse_auth}?schema=public
+    command: ["npx", "prisma", "migrate", "deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - heroverse-network
+    # One-shot job: the inherited HTTP healthcheck is meaningless here and only
+    # makes the container show as "unhealthy".
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: heroverse-auth
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-admin123}@postgres:5432/${POSTGRES_DB:-heroverse_auth}?schema=public
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      JWT_ISSUER: ${JWT_ISSUER:-heroverse-auth}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-heroverse-services}
+      JWT_PRIVATE_KEY_PATH: ${JWT_PRIVATE_KEY_PATH:-./keys/private.pem}
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-./keys/public.pem}
+      ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
+      REFRESH_TOKEN_TTL_SECONDS: ${REFRESH_TOKEN_TTL_SECONDS:-604800}
+      REFRESH_COOKIE_NAME: ${REFRESH_COOKIE_NAME:-heroverse_refresh}
+    ports:
+      - "${AUTH_PORT:-3001}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-migrate:
+        condition: service_completed_successfully
+    networks:
+      - heroverse-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  heroverse-network:
+    driver: bridge

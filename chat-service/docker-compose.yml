@@ -1,0 +1,50 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: heroverse-chat-mongo
+    restart: unless-stopped
+    volumes:
+      - chat_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' | grep 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - heroverse-chat-network
+
+  chat-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: heroverse-chat
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      MONGO_URI: mongodb://mongo:27017/${MONGO_DB:-heroverse_chat}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      JWT_ISSUER: ${JWT_ISSUER:-heroverse-auth}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-heroverse-services}
+      JWT_PUBLIC_KEY_PATH: /app/keys/public.pem
+      MESSAGE_HISTORY_LIMIT: ${MESSAGE_HISTORY_LIMIT:-100}
+    ports:
+      - "${CHAT_PORT:-3002}:3002"
+    volumes:
+      - type: bind
+        source: ../auth-service/keys/public.pem
+        target: /app/keys/public.pem
+        read_only: true
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - heroverse-chat-network
+
+volumes:
+  chat_mongo_data:
+
+networks:
+  heroverse-chat-network:
+    driver: bridge

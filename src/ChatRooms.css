@@ -136,3 +136,34 @@
 @media (prefers-reduced-motion:reduce){
   .vc-chat *{animation:none !important;transition-duration:.001ms !important}
 }
+
+/* ---------- présence & état de connexion ---------- */
+.vc-head-info{flex:1;min-width:0}
+.vc-online{
+  margin-left:auto;flex:none;display:flex;align-items:center;gap:7px;max-width:42%;
+  padding:5px 9px;border:2px solid var(--ink);background:var(--paper);
+  font-size:11px;font-weight:600;letter-spacing:.03em;
+}
+.vc-online.offline{opacity:.55}
+.vc-online-dot{flex:none;width:8px;height:8px;border-radius:50%;border:1px solid var(--ink);background:#1E7A4C}
+.vc-online.offline .vc-online-dot{background:var(--muted)}
+.vc-online-count{white-space:nowrap}
+.vc-online-names{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-weight:500}
+.vc-room-online{font-size:10px;font-weight:600;letter-spacing:.04em;color:#1E7A4C}
+.vc-room.active .vc-room-online{color:#fff}
+
+/* ---------- écran verrouillé (non connecté) ---------- */
+.vc-chat--locked{display:flex;align-items:center;justify-content:center;padding:24px;background:var(--paper)}
+.vc-locked{
+  width:min(430px,100%);padding:30px;text-align:center;
+  border:3px solid var(--ink);background:var(--sheet);box-shadow:8px 8px 0 var(--ink);
+}
+.vc-locked-kicker{margin:0 0 8px;font-family:var(--comic);font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.vc-locked h2{margin:0 0 10px;font-family:var(--comic);font-weight:400;font-size:36px;line-height:1.05;color:var(--ink)}
+.vc-locked p{margin:0 0 20px;font-family:var(--serif);font-size:16px;line-height:1.5;color:var(--muted)}
+.vc-locked .vc-btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+
+@media (max-width:767px){
+  .vc-online{max-width:52%}
+  .vc-online-names{display:none}
+}

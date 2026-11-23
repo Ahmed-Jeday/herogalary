@@ -1,0 +1,29 @@
+{
+  "name": "chat-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HeroVerse realtime chat service (Express + Socket.IO + MongoDB)",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "test": "echo \"No tests configured yet\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.9.5",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
