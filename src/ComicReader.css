@@ -1,0 +1,28 @@
+.comic-reader {
+  width: 100%;
+  min-height: 500px;
+  background: #0b0b10;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.comic-loading,
+.comic-error {
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  background: #0b0b10;
+}
+
+.comic-error {
+  color: #ef4444;
+}
+
+.comic-reading-page {
+  min-height: 100vh;
+  padding: 24px;
+  background: #0b0b10;
+  color: white;
+}
