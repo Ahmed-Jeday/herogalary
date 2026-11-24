@@ -14,9 +14,10 @@ import ChatRooms from './components/ChatRooms';
 import VanguardHero from './components/vanguard-hero';
 import Dashboard from './dashboard/App';
 import ComicReadingPage from './pages/ComicReadingPage';
+import ShopSection from './components/ShopSection';
 
 
-const SECTIONS = ['Vanguard', 'Films', 'Comics', 'Chat', 'Dashboard'];
+const SECTIONS = ['Vanguard', 'Films', 'Comics', 'Shop', 'Chat', 'Dashboard'];
 
 export default function App() {
   const engineRef = useRef(null);
@@ -86,6 +87,20 @@ export default function App() {
     engineRef.current?.setPaletteBase(PAL[name]);
   }, []);
 
+  /* --------------------------- shop -------------------------------- */
+  const handleShopAddToCart = useCallback((item) => {
+    catalog.addShopToCart(item.id);
+    const count = catalog.shopCount + 1;
+    toast(`PANIER · ${count} ARTICLE${count > 1 ? 'S' : ''}`);
+  }, [catalog, toast]);
+
+  const handleShopCheckout = useCallback(() => {
+    catalog.clearShopCart();
+    toast('COMMANDE CONFIRMÉE · MERCI !');
+  }, [catalog, toast]);
+
+  const cartCount = catalog.cart.length + catalog.shopCount;
+
   if (readingComic) {
     return <ComicReadingPage comic={readingComic} onBack={() => setReadingComic(null)} />;
   }
@@ -102,15 +117,13 @@ export default function App() {
       >
         <Scene engineRef={engineRef} onOpenExperiment={handleOpenExperiment} />
 
-        <Nav onGrid={toggleGrid} onProfile={() => setActiveSection(4)} />
+        <Nav onGrid={toggleGrid} onProfile={() => setActiveSection(5)} />
 
         <Logo />
 
-        <Footer sfxOn={sfxOn} onToggleSfx={toggleSfx} onHub={handleHub} cartCount={catalog.cart.length} onCart={() => toast(`PANIER · ${catalog.cart.length} FILM${catalog.cart.length > 1 ? 'S' : ''}`)} />
+        <Footer sfxOn={sfxOn} onToggleSfx={toggleSfx} onHub={handleHub} cartCount={cartCount} onCart={() => toast(`PANIER · ${cartCount} ARTICLE${cartCount > 1 ? 'S' : ''}`)} />
 
         <Palette active={paletteName} onChange={handlePalette} />
-
-        <Toast text={toastText} visible={toastVisible} />
 
         <MovieDetail
           index={overlayIdx}
@@ -124,13 +137,26 @@ export default function App() {
         <ComicVault onRead={setReadingComic} onExit={() => setActiveSection(1)} />
       )}
       {activeSection === 3 && (
+        <ShopSection
+          shopCart={catalog.shopCart}
+          shopCount={catalog.shopCount}
+          onAddToCart={handleShopAddToCart}
+          onRemoveFromCart={catalog.removeShopFromCart}
+          onSetQty={catalog.setShopQty}
+          onClearCart={catalog.clearShopCart}
+          onCheckout={handleShopCheckout}
+        />
+      )}
+      {activeSection === 4 && (
         <div className="chat-section">
           <ChatRooms />
         </div>
       )}
-      {activeSection === 4 && <Dashboard onExit={() => setActiveSection(1)} />}
+      {activeSection === 5 && <Dashboard onExit={() => setActiveSection(1)} />}
 
-      {activeSection !== 4 && <nav className="section-navigation" aria-label="Navigation entre les sections">
+      <Toast text={toastText} visible={toastVisible} />
+
+      {activeSection !== 5 && <nav className="section-navigation" aria-label="Navigation entre les sections">
         <button
           type="button"
           aria-label={activeSection > 0 ? `Section précédente : ${SECTIONS[activeSection - 1]}` : 'Première section'}

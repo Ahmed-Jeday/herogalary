@@ -27,10 +27,30 @@ function buildSeedRatings() {
 
 /* ─── état initial ─────────────────────────────────────────────────── */
 function getInitialState() {
+  const rawCart = load('vl.cart', []);
+  // Les anciens articles boutique étaient stockés dans le panier films.
+  const cart = Array.isArray(rawCart)
+    ? rawCart.filter((id) => !String(id).startsWith('shop:'))
+    : [];
+  if (Array.isArray(rawCart) && cart.length !== rawCart.length) {
+    save('vl.cart', cart);
+  }
+
+  const rawShopCart = load('vl.shopCart', []);
+  const shopCart = Array.isArray(rawShopCart)
+    ? rawShopCart.filter(
+        (line) =>
+          line &&
+          Number.isInteger(line.id) &&
+          Number(line.qty) > 0,
+      ).map((line) => ({ id: line.id, qty: Math.floor(Number(line.qty)) }))
+    : [];
+
   return {
     myRatings:  load('vl.ratings',  {}),          // { [movieId]: 1..5 }
     comments:   load('vl.comments', {}),           // { [movieId]: [{id,user,text,stars,date}] }
-    cart:       load('vl.cart',     []),            // [movieId, …]
+    cart,                                          // [movieId, …]
+    shopCart,                                      // [{ id, qty }, …]
     owned:      load('vl.owned',    []),            // [movieId, …]
     rented:     load('vl.rented',   {}),            // { [movieId]: expiresAt (ms) }
     user:       load('vl.user',     { name: 'Invité', avatar: null }),
@@ -121,6 +141,49 @@ export function useCatalog() {
     });
   }, []);
 
+  /* ── panier boutique ────────────────────────────────────────────── */
+  const addShopToCart = useCallback((id) => {
+    setState((prev) => {
+      const existing = prev.shopCart.find((line) => line.id === id);
+      const shopCart = existing
+        ? prev.shopCart.map((line) =>
+            line.id === id ? { ...line, qty: line.qty + 1 } : line,
+          )
+        : [...prev.shopCart, { id, qty: 1 }];
+      save('vl.shopCart', shopCart);
+      return { ...prev, shopCart };
+    });
+  }, []);
+
+  const removeShopFromCart = useCallback((id) => {
+    setState((prev) => {
+      const shopCart = prev.shopCart.filter((line) => line.id !== id);
+      save('vl.shopCart', shopCart);
+      return { ...prev, shopCart };
+    });
+  }, []);
+
+  const setShopQty = useCallback((id, qty) => {
+    setState((prev) => {
+      const nextQty = Math.max(0, Math.floor(Number(qty) || 0));
+      const shopCart =
+        nextQty === 0
+          ? prev.shopCart.filter((line) => line.id !== id)
+          : prev.shopCart.map((line) =>
+              line.id === id ? { ...line, qty: nextQty } : line,
+            );
+      save('vl.shopCart', shopCart);
+      return { ...prev, shopCart };
+    });
+  }, []);
+
+  const clearShopCart = useCallback(() => {
+    setState((prev) => {
+      save('vl.shopCart', []);
+      return { ...prev, shopCart: [] };
+    });
+  }, []);
+
   /* ── achat ──────────────────────────────────────────────────────── */
   const buy = useCallback((movieId) => {
     setState((prev) => {
@@ -173,6 +236,8 @@ export function useCatalog() {
     myRatings:  state.myRatings,
     comments:   state.comments,
     cart:       state.cart,
+    shopCart:   state.shopCart,
+    shopCount:  state.shopCart.reduce((total, line) => total + line.qty, 0),
     owned:      state.owned,
     rented:     state.rented,
     user:       state.user,
@@ -181,6 +246,10 @@ export function useCatalog() {
     addComment,
     addToCart,
     removeFromCart,
+    addShopToCart,
+    removeShopFromCart,
+    setShopQty,
+    clearShopCart,
     buy,
     rent,
     setUserName,

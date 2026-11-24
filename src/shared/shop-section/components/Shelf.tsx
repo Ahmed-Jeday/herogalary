@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import {
   CATS,
   DECK_SLOTS,
@@ -26,7 +25,7 @@ interface BoxRef {
 
 /** Fly through a stack of boxes, each one flooding the screen with its universe. */
 export function Shelf() {
-  const { openLead, openQuick } = useSiteUi();
+  const { addToCart, openQuick, openStore, openCart, cartCount } = useSiteUi();
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const sbaseRef = useRef<HTMLElement>(null);
@@ -181,7 +180,7 @@ export function Shelf() {
     }
   });
 
-  const holdIt = (id: number) => openLead(ITEMS[id].name);
+  const holdIt = (id: number) => addToCart(id);
 
   return (
     <section className="shelf" id="shelf" ref={sectionRef}>
@@ -208,9 +207,12 @@ export function Shelf() {
                 </button>
               ))}
             </div>
-            <Link href="/store" className="btn sline seeall">
+            <button className="btn sline seeall" type="button" onClick={openStore}>
               See all
-            </Link>
+            </button>
+            <button className="btn sline cartbtn" type="button" onClick={openCart}>
+              Panier{cartCount > 0 ? ` · ${cartCount}` : ""}
+            </button>
           </div>
         </div>
 

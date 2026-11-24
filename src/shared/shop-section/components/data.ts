@@ -188,5 +188,23 @@ export const productImage = (i: number) =>
 export const productThumb = (i: number) =>
   `${BASE}/img/t/b${String(i).padStart(2, "0")}.webp`;
 
+const PRICE_BASE: Record<Category, number> = {
+  marvel: 24.9,
+  dc: 22.9,
+  spawn: 27.9,
+  anime: 34.9,
+  pop: 19.9,
+};
+
+/** Stable demo price for a product, in euros. */
+export const productPrice = (i: number) => {
+  const item = ITEMS[i];
+  if (!item) return 0;
+  return Math.round((PRICE_BASE[item.category] + ((i * 7) % 5) * 1.5) * 100) / 100;
+};
+
+export const formatPrice = (value: number) =>
+  new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(value);
+
 export const frameImage = (id: string, size: "d" | "m", frame: number) =>
   `${BASE}/frames/${id}/${size}/${String(frame).padStart(4, "0")}.webp`;

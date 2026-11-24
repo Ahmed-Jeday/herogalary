@@ -6,7 +6,8 @@ import '../vanguardHero.css';
 const NAV_LINKS = [
   { label: 'Films', section: 1 },
   { label: 'Comics', section: 2 },
-  { label: 'Chat', section: 3 },
+  { label: 'Shop', section: 3 },
+  { label: 'Chat', section: 4 },
 ];
 
 const VIDEO_URL =

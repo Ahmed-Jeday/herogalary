@@ -7,6 +7,21 @@ export function goToShelf(key: string) {
   if (!shelf || !stage) return;
   const index = WORLDS.findIndex((w) => w.k === key);
   if (index < 0) return;
+
   const span = shelf.offsetHeight - stage.offsetHeight;
-  window.scrollTo(0, shelf.offsetTop + (span * index) / (WORLDS.length - 1));
+  const offset = (span * index) / (WORLDS.length - 1);
+
+  // The shop lives in its own scroll container inside the single-page app.
+  const scroller = shelf.closest<HTMLElement>(".shop-section");
+  if (scroller) {
+    const top =
+      shelf.getBoundingClientRect().top -
+      scroller.getBoundingClientRect().top +
+      scroller.scrollTop +
+      offset;
+    scroller.scrollTo({ top, behavior: "smooth" });
+    return;
+  }
+
+  window.scrollTo(0, shelf.offsetTop + offset);
 }

@@ -1,50 +1,48 @@
 # Shop Section
 
-Package reutilisable Next.js contenant la section Shelf, le catalogue Store et la fenetre quick-view partagee.
+Section boutique réutilisable (Shelf 3D + catalogue + quick-view) adaptée à
+l'application **Vite + React** de HeroVerse.
 
 ## Contenu
 
-- `components/Shelf.tsx`
-- `components/StoreGrid.tsx`
-- `components/SiteUi.tsx`
-- `components/data.ts`
-- `components/hooks.ts`
-- `components/navigation.ts`
-- `styles/twilight-shop.css`
-- `public/sites/twilightcomix/img/`
-- `example/store-page.tsx`
-- `index.ts`
+- `components/Shelf.tsx` — étagère 3D, navigation par univers
+- `components/StoreGrid.tsx` — catalogue filtrable
+- `components/SiteUi.tsx` — provider + fenêtre quick-view
+- `components/data.ts` — produits, univers, chemins d'images
+- `components/hooks.ts` — hooks responsive / animation
+- `components/navigation.ts` — scroll vers un univers du Shelf
+- `styles/twilight-shop.css` — styles de la boutique
+- `public/sites/twilightcomix/img/` — visuels des produits
+- `example/store-page.tsx` — exemple d'usage
 
-## Prerequis
+## Intégration dans l'application
 
-- Next.js App Router
-- React 19
-- Next `Link`
-- Import des polices variables nommees `--font-bangers` et `--font-barlow`
+1. Copier les images vers le dossier public de Vite :
 
-## Installation dans un autre projet
-
-1. Copiez le dossier `shop-section` dans `src/shared/`.
-2. Copiez `public/sites/twilightcomix/img/` vers `public/sites/twilightcomix/img/`.
-3. Importez le CSS dans le layout global Next.js:
-
-```tsx
-import "@/shared/shop-section/styles/twilight-shop.css";
+```bash
+cp -r src/shared/shop-section/public/sites public/
 ```
 
-4. Copiez ou adaptez `example/store-page.tsx` vers `src/app/store/page.tsx`.
-5. Ajoutez `Shelf` dans une page enveloppee par `SiteUiProvider`:
+2. Envelopper le Shelf et/ou le StoreGrid dans `SiteUiProvider` :
 
 ```tsx
-import { Shelf, SiteUiProvider } from "@/shared/shop-section";
+import { Shelf, SiteUiProvider, StoreGrid } from "@/shared/shop-section";
 
-export default function Page() {
-  return (
-    <SiteUiProvider>
-      <main>
-        <Shelf />
-      </main>
-    </SiteUiProvider>
-  );
-}
+<SiteUiProvider
+  onAddToCart={(item) => addToCart(item)}
+  onOpenStore={() => setView("store")}
+  onBackToShelf={() => setView("shelf")}
+>
+  {view === "shelf" ? <Shelf /> : <StoreGrid />}
+</SiteUiProvider>
 ```
+
+3. Le composant `src/components/ShopSection.jsx` fournit déjà ce branchement,
+   avec le CSS injecté uniquement lorsque la section est montée (`?inline`).
+
+## Notes
+
+- Les imports `next/link` ont été remplacés par des boutons et des callbacks
+  (`openStore`, `backToShelf`) pour fonctionner dans une SPA Vite.
+- Les polices `Bangers` et `Barlow` sont chargées depuis `index.html`.
+- Les images sont servies depuis `/sites/twilightcomix/img/...`.

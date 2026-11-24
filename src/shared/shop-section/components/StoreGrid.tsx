@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { CATS, ITEMS, productImage, productThumb } from "./data";
 import { useIsTouch } from "./hooks";
 import { useSiteUi } from "./SiteUi";
@@ -11,7 +10,7 @@ type FilterKey = "all" | CategoryKey;
 
 /** Full catalog: every item on the shelf, filterable by universe, opening the same quick-view dialog as the Shelf. */
 export function StoreGrid() {
-  const { openQuick } = useSiteUi();
+  const { openQuick, backToShelf, openCart, cartCount } = useSiteUi();
   const touch = useIsTouch();
   const [filter, setFilter] = useState<FilterKey>("all");
 
@@ -28,9 +27,14 @@ export function StoreGrid() {
   return (
     <main className="storepage">
       <header className="storehead">
-        <Link href="/#shelf" className="btn sline back">
-          ← Back to the shelf
-        </Link>
+        <div className="storehead-top">
+          <button className="btn sline back" type="button" onClick={backToShelf}>
+            ← Back to the shelf
+          </button>
+          <button className="btn sline cartbtn" type="button" onClick={openCart}>
+            Panier{cartCount > 0 ? ` · ${cartCount}` : ""}
+          </button>
+        </div>
         <h1>The Store</h1>
         <p className="storecount">
           {items.length} {items.length === 1 ? "piece" : "pieces"} on the shelves
