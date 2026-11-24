@@ -12,9 +12,10 @@ import { useCatalog } from './store/useCatalog';
 import ComicVault from './components/ComicVault';
 import ChatRooms from './components/ChatRooms';
 import VanguardHero from './components/vanguard-hero';
+import Dashboard from './dashboard/App';
 
 
-const SECTIONS = ['Vanguard', 'Films', 'Comics', 'Chat'];
+const SECTIONS = ['Vanguard', 'Films', 'Comics', 'Chat', 'Dashboard'];
 
 export default function App() {
   const engineRef = useRef(null);
@@ -95,7 +96,7 @@ export default function App() {
       >
         <Scene engineRef={engineRef} onOpenExperiment={handleOpenExperiment} />
 
-        <Nav onGrid={toggleGrid} />
+        <Nav onGrid={toggleGrid} onProfile={() => setActiveSection(4)} />
 
         <Logo />
 
@@ -119,8 +120,9 @@ export default function App() {
           <ChatRooms />
         </div>
       )}
+      {activeSection === 4 && <Dashboard onExit={() => setActiveSection(1)} />}
 
-      <nav className="section-navigation" aria-label="Navigation entre les sections">
+      {activeSection !== 4 && <nav className="section-navigation" aria-label="Navigation entre les sections">
         <button
           type="button"
           aria-label={activeSection > 0 ? `Section précédente : ${SECTIONS[activeSection - 1]}` : 'Première section'}
@@ -144,7 +146,7 @@ export default function App() {
             <path d="M5 10h10m-5-5 5 5-5 5" />
           </svg>
         </button>
-      </nav>
+      </nav>}
     </>
   );
 }
