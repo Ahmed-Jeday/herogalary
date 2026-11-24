@@ -5,7 +5,7 @@ import JSZip from "jszip";
 import { ComicViewer } from "react-comic-viewer";
 import "react-comic-viewer/styles.css";
 
-import "./ComicReader.css";
+import "../ComicReader.css";
 
 function ComicReader({ file }) {
   const [pages, setPages] = useState([]);
@@ -15,6 +15,12 @@ function ComicReader({ file }) {
   useEffect(() => {
     let cancelled = false;
     const objectUrls = [];
+    const controller = new AbortController();
+
+    function releaseObjectUrls() {
+      objectUrls.forEach(url => URL.revokeObjectURL(url));
+      objectUrls.length = 0;
+    }
 
     async function loadComic() {
       try {
@@ -22,18 +28,15 @@ function ComicReader({ file }) {
         setError("");
         setPages([]);
 
-        // 1. Fetch the CBZ file
-        const response = await fetch(file);
+        const response = await fetch(file, { signal: controller.signal });
 
         if (!response.ok) {
-          throw new Error("Comic file not found");
+          throw new Error("Fichier CBZ introuvable.");
         }
 
-        // 2. Extract the ZIP archive
         const buffer = await response.arrayBuffer();
         const zip = await JSZip.loadAsync(buffer);
 
-        // 3. Get and sort comic images
         const images = Object.values(zip.files)
           .filter(entry =>
             !entry.dir &&
@@ -48,11 +51,10 @@ function ComicReader({ file }) {
           );
 
         if (!images.length) {
-          throw new Error("No comic pages found");
+          throw new Error("Aucune page d’image trouvée dans cette archive.");
         }
 
-        // 4. Convert images into browser URLs
-        const urls = await Promise.all(
+        const results = await Promise.allSettled(
           images.map(async image => {
             const blob = await image.async("blob");
             const url = URL.createObjectURL(blob);
@@ -61,17 +63,23 @@ function ComicReader({ file }) {
             return url;
           })
         );
+        const failedPage = results.find(result => result.status === "rejected");
+        if (failedPage) throw failedPage.reason;
+        const urls = results.map(result => result.value);
 
         if (!cancelled) {
           setPages(urls);
         }
 
       } catch (err) {
+        releaseObjectUrls();
         if (!cancelled) {
-          setError(err.message);
+          setError(err instanceof Error ? err.message : "Impossible de charger ce comic.");
         }
       } finally {
-        if (!cancelled) {
+        if (cancelled) {
+          releaseObjectUrls();
+        } else {
           setLoading(false);
         }
       }
@@ -79,24 +87,20 @@ function ComicReader({ file }) {
 
     loadComic();
 
-    // Clean up generated URLs
     return () => {
       cancelled = true;
-      objectUrls.forEach(url => URL.revokeObjectURL(url));
+      controller.abort();
+      releaseObjectUrls();
     };
 
   }, [file]);
 
   if (loading) {
-    return <div className="comic-loading">
-      Loading comic...
-    </div>;
+    return <div className="comic-loading" role="status">Chargement du comic…</div>;
   }
 
   if (error) {
-    return <div className="comic-error">
-      {error}
-    </div>;
+    return <div className="comic-error" role="alert">{error}</div>;
   }
 
   return (

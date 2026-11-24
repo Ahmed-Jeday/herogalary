@@ -13,6 +13,7 @@ import ComicVault from './components/ComicVault';
 import ChatRooms from './components/ChatRooms';
 import VanguardHero from './components/vanguard-hero';
 import Dashboard from './dashboard/App';
+import ComicReadingPage from './pages/ComicReadingPage';
 
 
 const SECTIONS = ['Vanguard', 'Films', 'Comics', 'Chat', 'Dashboard'];
@@ -26,6 +27,7 @@ export default function App() {
   const [sfxOn, setSfxOn] = useState(false);
   const [paletteName, setPaletteName] = useState('GREEN');
   const [activeSection, setActiveSection] = useState(1);
+  const [readingComic, setReadingComic] = useState(null);
 
   // refs miroirs (évite les setState avec effets de bord)
   const sfxOnRef = useRef(false);
@@ -84,6 +86,10 @@ export default function App() {
     engineRef.current?.setPaletteBase(PAL[name]);
   }, []);
 
+  if (readingComic) {
+    return <ComicReadingPage comic={readingComic} onBack={() => setReadingComic(null)} />;
+  }
+
   /* --------------------------- render ------------------------------ */
   return (
     <>
@@ -114,7 +120,9 @@ export default function App() {
         />
       </main>
 
-      {activeSection === 2 && <ComicVault />}
+      {activeSection === 2 && (
+        <ComicVault onRead={setReadingComic} onExit={() => setActiveSection(1)} />
+      )}
       {activeSection === 3 && (
         <div className="chat-section">
           <ChatRooms />

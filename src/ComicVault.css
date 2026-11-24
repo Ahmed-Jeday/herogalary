@@ -126,6 +126,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0}
 .dsyn{font-family:var(--serif);font-size:17px;line-height:1.5;max-width:42ch}
 .dcredit{font-family:var(--serif);font-style:italic;font-size:15px;line-height:1.4;color:var(--muted)}
 .watch{height:44px;padding:0 20px;margin-top:10px;border:2px solid var(--ink);background:var(--accent);color:#fff;display:inline-flex;align-items:center;font-family:var(--comic);font-size:17px;letter-spacing:.08em;text-transform:uppercase;box-shadow:4px 4px 0 var(--ink)}
+.watch:disabled{background:var(--muted);box-shadow:4px 4px 0 var(--ink);cursor:not-allowed}
 .dright{align-self:center;justify-self:center;height:min(100%,78vh);display:flex;align-items:center;justify-content:center}
 .dright svg{height:min(100%,78vh);width:auto;max-width:100%;display:block}
 }

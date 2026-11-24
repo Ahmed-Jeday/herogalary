@@ -18,9 +18,10 @@ const FILMS = [
   { id:"comet",    title:"Phantom Comet",     hero:"Inconnu",           pub:"Zenith",         year:1978, genre:"Fantastique",     pages:32, sc:"#D7261E", st:"#FFC914", cover:WM+"Bulletman_05_0001.png?width=700",          syn:"Tous les soixante-dix ans, une comète traverse le ciel et réveille un fantôme qui cherche à finir ce qu'il a commencé." },
   { id:"knight",   title:"Cyber Knight",      hero:"Kai Nakamura",      pub:"Neon House",     year:1983, genre:"Cyberpunk",       pages:48, sc:"#5B2A86", st:"#7DF9FF", cover:WM+"MagicianfromMarsfromAmazingManComics11.PNG?width=700", syn:"Dans une mégapole saturée de néons, un hacker greffé d'une armure ancienne se bat pour libérer la ville de ses propres machines." },
   { id:"starfall", title:"Starfall",          hero:"Mira Okoye",        pub:"Neon House",     year:1988, genre:"Cosmique",        pages:60, sc:"#1F3FB0", st:"#FFC914", cover:WM+"An_Earth_Man_on_Venus_comic_book.jpg?width=700", syn:"Une étoile s'écrase au cœur de Lagos. Mira en émerge avec le pouvoir de plier la lumière — et une dette envers le ciel." },
+  { id:"xmen-incursions", title:"X-Men: Incursions #001", hero:"X-Men", pub:"Marvel Comics", year:2027, genre:"Science-fiction", pages:32, sc:"#5B2A86", st:"#FFFFFF", file:"/comic/X-Men%20-%20Incursions%20001%20(2027)%20(Digital).cbz", syn:"L’édition numérique de ce numéro est disponible dans la bibliothèque HeroVerse." },
 ];
 
-const DECADE_FIRST = { 1940:0, 1950:4, 1960:6, 1970:8, 1980:10 };
+const DECADE_FIRST = { 1940:0, 1950:4, 1960:6, 1970:8, 1980:10, 2020:12 };
 const N = FILMS.length;
 const COPIES = 3;
 const LOOP = N * COPIES;
@@ -45,7 +46,7 @@ function relIndex(v, sc) {
 /* =========================================================
    COMPONENT
    ========================================================= */
-export default function ComicVault() {
+export default function ComicVault({ onRead, onExit }) {
   const stageRef      = useRef(null);
   const shelfRef      = useRef(null);
   const tabsRef       = useRef(null);
@@ -59,6 +60,7 @@ export default function ComicVault() {
   const dTitleRef     = useRef(null);
   const dMetaRef      = useRef(null);
   const dSynRef       = useRef(null);
+  const watchRef      = useRef(null);
   const posterImgRef  = useRef(null);
   const maskTitleRef  = useRef(null);
   const maskSubRef    = useRef(null);
@@ -184,7 +186,14 @@ export default function ComicVault() {
       if (dTitleRef.current) dTitleRef.current.textContent = film.title;
       if (dMetaRef.current)  dMetaRef.current.textContent  = film.year + " / " + film.genre.toUpperCase() + " / " + film.pages + " PAGES";
       if (dSynRef.current)   dSynRef.current.textContent   = film.syn;
-      if (posterImgRef.current) posterImgRef.current.setAttribute("href", film.cover);
+      if (watchRef.current) {
+        watchRef.current.disabled = !film.file;
+        watchRef.current.textContent = film.file ? "Lire le comic" : "Archive indisponible";
+      }
+      if (posterImgRef.current) {
+        if (film.cover) posterImgRef.current.setAttribute("href", film.cover);
+        else posterImgRef.current.removeAttribute("href");
+      }
       resetBlobs();
     }
 
@@ -319,6 +328,10 @@ export default function ComicVault() {
 
     /* cover fallback */
     FILMS.forEach(f => {
+      if (!f.cover) {
+        document.querySelectorAll('.cv[data-id="' + f.id + '"]').forEach(c => c.classList.add("nocover"));
+        return;
+      }
       const img = new Image();
       img.onerror = () => {
         document.querySelectorAll('.cv[data-id="' + f.id + '"]').forEach(c => {
@@ -544,12 +557,12 @@ export default function ComicVault() {
   return (
     <div className="comic-vault">
       <header className="topbar">
-        <a className="box lbl left" href="#">Retour</a>
+        <button type="button" className="box lbl left" onClick={onExit}>Retour</button>
         <a className="logo" href="#">
           <span className="cn">COMIC VAULT</span>
           <span className="en">BIBLIOTHÈQUE DE COMICS</span>
         </a>
-        <span className="lbl right">Collection 1940–1988</span>
+        <span className="lbl right">Collection 1940–2027</span>
       </header>
 
       <nav className="tabs" aria-label="Décennies" ref={tabsRef}>
@@ -560,6 +573,7 @@ export default function ComicVault() {
         <button className="tab lbl" data-decade="1960">1960s</button>
         <button className="tab lbl" data-decade="1970">1970s</button>
         <button className="tab lbl" data-decade="1980">1980s</button>
+        <button className="tab lbl" data-decade="2020">2020s</button>
       </nav>
 
       <section className="shelf" ref={shelfRef} aria-label="Étagère de comics">
@@ -599,7 +613,7 @@ export default function ComicVault() {
                     style={{
                       "--sc": film.sc,
                       "--st": film.st,
-                      backgroundImage: `url("${film.cover}")`,
+                      backgroundImage: film.cover ? `url("${film.cover}")` : "none",
                     }}
                   >
                     <span className="nc">{film.title}</span>
@@ -678,7 +692,16 @@ export default function ComicVault() {
             <div className="dline"><span className="dmeta" ref={dMetaRef} /></div>
             <div className="dline"><span className="dsyn" ref={dSynRef} /></div>
             <div className="dline"><span className="dcredit">Scénario et dessin : l'équipe Comic Vault.</span></div>
-            <div className="dline"><button className="watch">Lire le comic</button></div>
+            <div className="dline">
+              <button
+                className="watch"
+                ref={watchRef}
+                onClick={() => {
+                  const film = FILMS[stateRef.current.active];
+                  if (film.file) onRead?.(film);
+                }}
+              />
+            </div>
           </div>
           <div className="dright">
             <svg viewBox="0 0 600 900" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
