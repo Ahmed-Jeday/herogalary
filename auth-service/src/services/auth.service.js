@@ -129,6 +129,10 @@ function publicUser(user) {
     username: user.username,
     email: user.email,
     role: user.role,
+    bio: user.bio || "",
+    xp: user.xp || 1450,
+    gamesPlayed: user.gamesPlayed || 8,
+    createdAt: user.createdAt,
   };
 }
 
@@ -142,18 +146,26 @@ async function getProfile(userId) {
   return publicUser(user);
 }
 
-async function updateProfile(userId, { username }) {
-  if (typeof username !== "string" || username.trim().length < 2) {
-    throw serviceError(
-      400,
-      "Username must contain at least 2 characters",
-      "VALIDATION_ERROR",
-    );
+async function updateProfile(userId, { username, bio }) {
+  const data = {};
+  if (username !== undefined) {
+    if (typeof username !== "string" || username.trim().length < 2) {
+      throw serviceError(
+        400,
+        "Username must contain at least 2 characters",
+        "VALIDATION_ERROR",
+      );
+    }
+    data.username = username.trim();
+  }
+
+  if (bio !== undefined && typeof bio === "string") {
+    data.bio = bio.slice(0, 220);
   }
 
   const user = await prisma.user.update({
     where: { id: userId },
-    data: { username: username.trim() },
+    data,
   });
 
   return publicUser(user);

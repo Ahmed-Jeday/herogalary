@@ -1,0 +1,13 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_AUTH_API_URL: ${VITE_AUTH_API_URL:-http://localhost:3001}
+        VITE_CHAT_API_URL: ${VITE_CHAT_API_URL:-http://localhost:3002}
+        VITE_SHOP_API_URL: ${VITE_SHOP_API_URL:-http://localhost:3003}
+    container_name: heroverse-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"

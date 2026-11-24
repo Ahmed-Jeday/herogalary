@@ -1,0 +1,12 @@
+.git
+.github
+node_modules
+dist
+coverage
+auth-service
+chat-service
+shop-service
+user profile
+.env
+.env.*
+*.log

@@ -1,6 +1,5 @@
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -14,14 +13,20 @@ enum Role {
 }
 
 model User {
-  id           String         @id @default(uuid())
-  username     String
-  email        String         @unique
-  password     String
-  role         Role           @default(USER)
+  id            String          @id @default(uuid())
+  username      String
+  email         String          @unique
+  password      String
+  role          Role            @default(USER)
+  bio           String?         @default("Fan de comics et de films de super-héros depuis toujours.")
+  xp            Int             @default(1450)
+  gamesPlayed   Int             @default(8)
   refreshTokens RefreshToken[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  favorites     UserFavorite[]
+  watchlist     UserWatchlist[]
+  comics        UserComic[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 }
 
 model RefreshToken {
@@ -32,4 +37,43 @@ model RefreshToken {
   revokedAt DateTime?
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+model UserFavorite {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // "Movie", "Comic", "Character", "Series"
+  title     String
+  meta      String?
+  sc        String?  @default("#1F3FB0")
+  st        String?  @default("#FFFFFF")
+  createdAt DateTime @default(now())
+}
+
+model UserWatchlist {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  type      String   // "Movie", "Series"
+  status    String   @default("to-watch") // "to-watch", "watching", "watched"
+  sc        String?  @default("#D7261E")
+  st        String?  @default("#FFC914")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserComic {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  status    String   @default("reading") // "reading", "completed", "saved"
+  progress  Int      @default(0)
+  chapter   Int      @default(0)
+  sc        String?  @default("#1F3FB0")
+  st        String?  @default("#FFFFFF")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

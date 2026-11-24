@@ -1,31 +1,27 @@
-/**
- * Simulated dashboard API.
- * Same pattern as the chat's chatApi.js: every function is async and returns
- * plain JSON. To go live, keep the signatures and replace each body with fetch(...).
- */
+import { getAccessToken } from "../../api/authApi";
 
-const LATENCY = [150, 350];
-const wait = () =>
-  new Promise((r) => setTimeout(r, LATENCY[0] + Math.random() * (LATENCY[1] - LATENCY[0])));
+const API_BASE_URL = (
+  import.meta.env.VITE_AUTH_API_URL || "http://localhost:3001"
+).replace(/\/$/, "");
 
-/* ---------- in-memory "database" ---------- */
+/* ---------- In-memory & fallback state ---------- */
 
-let user = {
+let demoUser = {
   name: "Ahmed",
   handle: "@ahmed_j",
   bio: "Fan de comics et de films de super-héros depuis toujours.",
   memberSince: "Mars 2025",
-  online: true,
+  online: false,
 };
 
-const stats = [
+const demoStats = [
   { key: "favorites", label: "Favorites", value: 24 },
   { key: "comicsRead", label: "Comics read", value: 12 },
   { key: "gamesPlayed", label: "Games played", value: 8 },
   { key: "xp", label: "XP Points", value: 1450 },
 ];
 
-const continueReading = {
+const demoContinueReading = {
   id: "amazing-spiderman",
   title: "The Amazing Spider-Man",
   chapter: 5,
@@ -34,7 +30,7 @@ const continueReading = {
   st: "#FFFFFF",
 };
 
-const favorites = [
+let demoFavorites = [
   { id: "f1", type: "Movie", title: "Steel Sentinel", meta: "1945 · Nova Press", sc: "#1F3FB0", st: "#fff" },
   { id: "f2", type: "Comic", title: "Crimson Falcon", meta: "1941 · Vault Comics", sc: "#15110E", st: "#FFC914" },
   { id: "f3", type: "Character", title: "Captain Meteor", meta: "Marcus Hale", sc: "#D7261E", st: "#FFF3D6" },
@@ -43,14 +39,14 @@ const favorites = [
   { id: "f6", type: "Character", title: "Lady Lightning", meta: "Rose Delacroix", sc: "#FFC914", st: "#15110E" },
 ];
 
-const watchlist = [
+let demoWatchlist = [
   { id: "w1", title: "Phantom Comet", type: "Movie", status: "to-watch", sc: "#D7261E", st: "#FFC914" },
   { id: "w2", title: "Captain Aurora", type: "Series", status: "watching", sc: "#0E7C86", st: "#FFF3D6" },
   { id: "w3", title: "Cyber Knight", type: "Movie", status: "watched", sc: "#5B2A86", st: "#7DF9FF" },
   { id: "w4", title: "Starfall", type: "Series", status: "to-watch", sc: "#1F3FB0", st: "#FFC914" },
 ];
 
-const comics = [
+let demoComics = [
   { id: "c1", title: "The Amazing Spider-Man", status: "reading", progress: 65, chapter: 5, sc: "#1F3FB0", st: "#fff" },
   { id: "c2", title: "Crimson Falcon", status: "completed", progress: 100, chapter: 12, sc: "#15110E", st: "#FFC914" },
   { id: "c3", title: "Steel Sentinel", status: "saved", progress: 0, chapter: 0, sc: "#1F3FB0", st: "#FFFFFF" },
@@ -58,52 +54,213 @@ const comics = [
   { id: "c5", title: "Phantom Comet", status: "completed", progress: 100, chapter: 8, sc: "#D7261E", st: "#FFC914" },
 ];
 
-/* ---------- REST-like functions ---------- */
+/* ---------- HTTP Request Helper ---------- */
+
+async function request(path, options = {}) {
+  const token = getAccessToken();
+  if (!token) {
+    throw new Error("NO_TOKEN");
+  }
+
+  const headers = {
+    ...(options.body ? { "Content-Type": "application/json" } : {}),
+    Authorization: `Bearer ${token}`,
+    ...options.headers,
+  };
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+    const message =
+      payload?.error?.message || payload?.message || `HTTP ${response.status}`;
+    const err = new Error(message);
+    err.status = response.status;
+    throw err;
+  }
+
+  return response.json();
+}
+
+/* ---------- Dashboard API Functions ---------- */
 
 export async function getCurrentUser() {
-  await wait();
-  return { ...user };
+  try {
+    const data = await request("/api/dashboard/user");
+    return data.user;
+  } catch {
+    const storedUsername = localStorage.getItem("heroverse.username");
+    if (storedUsername) {
+      demoUser = {
+        ...demoUser,
+        name: storedUsername,
+        handle: `@${storedUsername.toLowerCase().replace(/\s+/g, "_")}`,
+        online: localStorage.getItem("heroverse.isLoggedIn") === "true",
+      };
+    }
+    return { ...demoUser };
+  }
 }
 
 export async function updateProfile(patch) {
-  await wait();
-  const name = (patch.name ?? user.name).trim();
-  if (!name) throw new Error("Le nom ne peut pas être vide.");
-  user = { ...user, ...patch, name, bio: (patch.bio ?? user.bio).slice(0, 220) };
-  return { ...user };
+  try {
+    const data = await request("/api/dashboard/profile", {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    });
+    if (data.user?.name) {
+      localStorage.setItem("heroverse.username", data.user.name);
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("heroverse:user-updated", { detail: data.user }));
+    }
+    return data.user;
+  } catch (err) {
+    if (err.message !== "NO_TOKEN" && err.status) {
+      throw err;
+    }
+    const name = (patch.name ?? demoUser.name).trim();
+    if (!name) throw new Error("Le nom ne peut pas être vide.");
+    demoUser = {
+      ...demoUser,
+      ...patch,
+      name,
+      bio: (patch.bio ?? demoUser.bio).slice(0, 220),
+    };
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("heroverse:user-updated", { detail: demoUser }));
+    }
+    return { ...demoUser };
+  }
 }
 
 export async function getStats() {
-  await wait();
-  return stats.map((s) => ({ ...s }));
+  try {
+    const data = await request("/api/dashboard/stats");
+    return data.stats;
+  } catch {
+    return demoStats.map((s) => ({ ...s }));
+  }
 }
 
 export async function getContinueReading() {
-  await wait();
-  return { ...continueReading };
+  try {
+    const data = await request("/api/dashboard/continue-reading");
+    return data.continueReading;
+  } catch {
+    return { ...demoContinueReading };
+  }
 }
 
 export async function getFavorites() {
-  await wait();
-  return favorites.map((f) => ({ ...f }));
+  try {
+    const data = await request("/api/dashboard/favorites");
+    return data.favorites;
+  } catch {
+    return demoFavorites.map((f) => ({ ...f }));
+  }
 }
 
 export async function getWatchlist() {
-  await wait();
-  return watchlist.map((w) => ({ ...w }));
+  try {
+    const data = await request("/api/dashboard/watchlist");
+    return data.watchlist;
+  } catch {
+    return demoWatchlist.map((w) => ({ ...w }));
+  }
 }
 
 export async function setWatchStatus(id, status) {
-  await wait();
-  const item = watchlist.find((w) => w.id === id);
-  if (!item) throw new Error("Cet élément n'existe plus dans la watchlist.");
-  item.status = status;
-  return { ...item };
+  try {
+    const data = await request(`/api/dashboard/watchlist/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+    return data.item;
+  } catch (err) {
+    if (err.status && err.status !== 404 && err.message !== "NO_TOKEN") {
+      throw err;
+    }
+    const item = demoWatchlist.find((w) => w.id === id);
+    if (!item) throw new Error("Cet élément n'existe plus dans la watchlist.");
+    item.status = status;
+    return { ...item };
+  }
 }
 
 export async function getComics() {
-  await wait();
-  return comics.map((c) => ({ ...c }));
+  try {
+    const data = await request("/api/dashboard/comics");
+    return data.comics;
+  } catch {
+    return demoComics.map((c) => ({ ...c }));
+  }
+}
+
+const SHOP_API_URL = (
+  import.meta.env.VITE_SHOP_API_URL || "http://localhost:3003"
+).replace(/\/$/, "");
+
+const demoOrders = [
+  {
+    _id: "ord-8831",
+    userId: "demo-user",
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+    total: 39.98,
+    status: "success",
+    payment: { status: "paid", amount: 39.98, currency: "EUR" },
+    items: [
+      { productId: "spiderman-tome-1", name: "The Amazing Spider-Man #1 Collector", price: 19.99, quantity: 1 },
+      { productId: "batman-figurine", name: "Figurine Articulée Steel Sentinel", price: 19.99, quantity: 1 },
+    ],
+  },
+  {
+    _id: "ord-7420",
+    userId: "demo-user",
+    createdAt: new Date(Date.now() - 86400000 * 6).toISOString(),
+    total: 14.50,
+    status: "pending",
+    payment: { status: "unpaid", amount: 14.50, currency: "EUR" },
+    items: [
+      { productId: "falcon-poster", name: "Poster Vintage Crimson Falcon", price: 14.50, quantity: 1 },
+    ],
+  },
+];
+
+export async function getUserOrders(_userId) {
+  const token = getAccessToken();
+  if (token) {
+    try {
+      // Le backend déduit le userId depuis le JWT et ne permet pas
+      // de demander les commandes d'un autre utilisateur.
+      const response = await fetch(`${SHOP_API_URL}/api/orders/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data?.orders) && data.orders.length > 0) {
+          return data.orders;
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  return demoOrders.map((o) => ({
+    ...o,
+    userId: userId || o.userId,
+  }));
 }
 
 export const dashboardApi = {
@@ -115,4 +272,5 @@ export const dashboardApi = {
   getWatchlist,
   setWatchStatus,
   getComics,
+  getUserOrders,
 };

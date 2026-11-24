@@ -20,3 +20,8 @@ If you are developing a production application, we recommend using TypeScript wi
 cd auth-service
 npx prisma migrate dev --name init
 npm start
+
+
+cd auth-service
+npx prisma migrate dev
+npm start

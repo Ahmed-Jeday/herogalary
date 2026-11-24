@@ -34,3 +34,33 @@ export async function createOrder(items) {
 
   return payload;
 }
+
+export async function getOrdersByUserId(_userId) {
+  const accessToken = getAccessToken();
+  // Le backend déduit toujours le userId depuis le JWT.
+  const endpoint = `${SHOP_API_URL}/api/orders/me`;
+
+  const headers = {
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+  };
+
+  const response = await fetch(endpoint, {
+    method: "GET",
+    headers,
+  });
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      payload?.error?.message || "Impossible de récupérer les commandes.",
+    );
+  }
+
+  return payload?.orders || [];
+}

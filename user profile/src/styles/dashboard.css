@@ -119,6 +119,19 @@
 
 .hv-loading{padding:40px;text-align:center;font-family:var(--serif);color:var(--muted)}
 
+/* ---------- orders list ---------- */
+.hv-orders-list{display:flex;flex-direction:column;gap:12px}
+.hv-order-card{background:#fff;border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.hv-order-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-bottom:1.5px dashed var(--ink);padding-bottom:8px}
+.hv-order-id{font-family:var(--comic);font-size:15px;letter-spacing:.04em;color:var(--ink)}
+.hv-order-date{font-size:12px;color:var(--muted)}
+.hv-order-total{font-family:var(--comic);font-size:16px;color:var(--accent)}
+.hv-order-items{display:flex;flex-direction:column;gap:6px}
+.hv-order-item-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px}
+.hv-order-item-qty{font-weight:700;color:var(--accent);min-width:24px}
+.hv-order-item-name{flex:1;color:var(--ink);font-weight:500}
+.hv-order-item-price{font-weight:600;color:var(--ink)}
+
 /* ---------- mobile ---------- */
 .hv-burger{display:none;height:36px;width:36px;border:2px solid var(--ink);background:var(--yellow);font-size:16px}
 .hv-scrim{position:fixed;inset:0;background:rgba(21,17,14,.5);z-index:20}

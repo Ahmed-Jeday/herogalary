@@ -26,6 +26,12 @@ export default function Dashboard({ onExit }) {
 
   useEffect(() => {
     dashboardApi.getCurrentUser().then(setUser);
+    const handleUserUpdate = (e) => {
+      if (e?.detail) setUser(e.detail);
+      else dashboardApi.getCurrentUser().then(setUser);
+    };
+    window.addEventListener("heroverse:user-updated", handleUserUpdate);
+    return () => window.removeEventListener("heroverse:user-updated", handleUserUpdate);
   }, []);
 
   function select(key) {
@@ -50,7 +56,7 @@ export default function Dashboard({ onExit }) {
         />
         <div className="hv-content">
           {Page ? (
-            <Page />
+            <Page user={user} />
           ) : (
             <Placeholder icon={meta?.icon} title={meta?.label} />
           )}

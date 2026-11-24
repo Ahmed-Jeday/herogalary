@@ -62,4 +62,14 @@ async function listMyOrders(req, res, next) {
   }
 }
 
-module.exports = { createOrder, listMyOrders };
+async function listOrdersByUserId(req, res, next) {
+  try {
+    const userId = req.params.userId || req.user.id;
+    const orders = await Order.find({ userId }).sort({ createdAt: -1 }).lean();
+    return res.status(200).json({ orders });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports = { createOrder, listMyOrders, listOrdersByUserId };

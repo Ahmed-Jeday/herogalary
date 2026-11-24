@@ -7,5 +7,6 @@ const router = express.Router();
 router.use(authenticate);
 router.post("/", orderController.createOrder);
 router.get("/me", orderController.listMyOrders);
+router.get("/user/:userId", orderController.listOrdersByUserId);
 
 module.exports = router;
