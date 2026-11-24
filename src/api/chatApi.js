@@ -1,4 +1,7 @@
 import { io } from "socket.io-client";
+import { getAccessToken } from "./authApi";
+
+export { getAccessToken };
 
 export const UNIVERSES = [
   "Vault Comics",
@@ -13,15 +16,6 @@ export const UNIVERSES = [
 const CHAT_API_URL = (
   import.meta.env.VITE_CHAT_API_URL || "http://localhost:3002"
 ).replace(/\/$/, "");
-
-/** Même stockage que authApi.js : session prioritaire, puis localStorage. */
-export function getAccessToken() {
-  return (
-    sessionStorage.getItem("heroverse.accessToken") ||
-    localStorage.getItem("heroverse.accessToken") ||
-    ""
-  );
-}
 
 export function getCurrentUsername() {
   return localStorage.getItem("heroverse.username") || "";

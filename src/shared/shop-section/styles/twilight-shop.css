@@ -2186,7 +2186,7 @@ dialog h3 {
   }
 }
 
-/* ---------- Étape paiement (démo front-end) ---------- */
+/* ---------- Étape d'enregistrement de la commande ---------- */
 .shopcart-pay {
   flex: 1;
   min-height: 0;

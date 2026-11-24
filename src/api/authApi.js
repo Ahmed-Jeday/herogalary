@@ -7,6 +7,15 @@ let accessToken =
   localStorage.getItem("heroverse.accessToken") ||
   "";
 
+export function getAccessToken() {
+  return (
+    accessToken ||
+    sessionStorage.getItem("heroverse.accessToken") ||
+    localStorage.getItem("heroverse.accessToken") ||
+    ""
+  );
+}
+
 async function request(path, options = {}) {
   const headers = {
     ...(options.body ? { "Content-Type": "application/json" } : {}),

@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { createOrder } from "../../../api/shopApi";
 import {
   CATS,
   formatPrice,
@@ -24,22 +25,6 @@ interface ShopCartProps {
 
 type Step = "cart" | "payment" | "done";
 
-interface PaymentForm {
-  name: string;
-  email: string;
-  card: string;
-  exp: string;
-  cvc: string;
-}
-
-const EMPTY_FORM: PaymentForm = {
-  name: "",
-  email: "",
-  card: "",
-  exp: "",
-  cvc: "",
-};
-
 export function ShopCart({
   open,
   lines,
@@ -50,8 +35,9 @@ export function ShopCart({
   onCheckout,
 }: ShopCartProps) {
   const [step, setStep] = useState<Step>("cart");
-  const [form, setForm] = useState<PaymentForm>(EMPTY_FORM);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [orderId, setOrderId] = useState("");
   const closeRef = useRef<HTMLButtonElement>(null);
 
   const validLines = lines.filter(
@@ -66,8 +52,9 @@ export function ShopCart({
   useEffect(() => {
     if (!open) {
       setStep("cart");
-      setForm(EMPTY_FORM);
       setError("");
+      setSaving(false);
+      setOrderId("");
       return;
     }
     const timer = window.setTimeout(() => closeRef.current?.focus(), 250);
@@ -83,41 +70,6 @@ export function ShopCart({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const update = (key: keyof PaymentForm, value: string) => {
-    setForm((current) => ({ ...current, [key]: value }));
-  };
-
-  const updateCard = (value: string) => {
-    const digits = value.replace(/\D/g, "").slice(0, 16);
-    update("card", digits.replace(/(.{4})/g, "$1 ").trim());
-  };
-
-  const updateExp = (value: string) => {
-    const digits = value.replace(/\D/g, "").slice(0, 4);
-    update("exp", digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits);
-  };
-
-  const validate = () => {
-    if (form.name.trim().length < 2) return "Indique ton nom complet.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      return "Indique un email valide.";
-    }
-    if (form.card.replace(/\D/g, "").length !== 16) {
-      return "Le numéro de carte doit contenir 16 chiffres.";
-    }
-    const exp = form.exp.match(/^(\d{2})\/(\d{2})$/);
-    if (!exp) return "La date d'expiration doit être au format MM/AA.";
-    const month = Number(exp[1]);
-    const year = 2000 + Number(exp[2]);
-    const now = new Date();
-    if (month < 1 || month > 12) return "Le mois d'expiration est invalide.";
-    if (year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1)) {
-      return "Cette carte est expirée.";
-    }
-    if (!/^\d{3,4}$/.test(form.cvc)) return "Le CVC doit contenir 3 ou 4 chiffres.";
-    return "";
-  };
-
   const goToPayment = () => {
     setError("");
     setStep("payment");
@@ -126,23 +78,40 @@ export function ShopCart({
   const clear = () => {
     setError("");
     setStep("cart");
+    setOrderId("");
     onClear();
   };
 
-  const pay = (event: FormEvent<HTMLFormElement>) => {
+  const pay = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const message = validate();
-    if (message) {
-      setError(message);
-      return;
-    }
+    if (saving || validLines.length === 0) return;
+
+    setSaving(true);
     setError("");
-    onCheckout();
-    setForm(EMPTY_FORM);
-    setStep("done");
+    try {
+      const result = await createOrder(
+        validLines.map((line) => ({
+          productId: String(line.id),
+          name: ITEMS[line.id].name,
+          price: productPrice(line.id),
+          quantity: line.qty,
+        })),
+      );
+      setOrderId(result?.order?._id || "");
+      onCheckout();
+      setStep("done");
+    } catch (checkoutError) {
+      setError(
+        checkoutError instanceof Error
+          ? checkoutError.message
+          : "Impossible d’enregistrer la commande.",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const title = step === "payment" ? "Paiement" : "Panier";
+  const title = step === "payment" ? "Commande" : "Panier";
   const kicker =
     step === "done"
       ? "Merci !"
@@ -185,11 +154,12 @@ export function ShopCart({
         {step === "done" ? (
           <div className="shopcart-done">
             <span className="shopcart-kicker">Merci !</span>
-            <h3>Commande confirmée</h3>
+            <h3>Commande enregistrée</h3>
             <p>
-              Ceci est une démo front-end : aucun paiement n&apos;a été effectué et
-              aucune donnée n&apos;a été envoyée.
+              Ta commande a été enregistrée dans ton compte. Aucun paiement n&apos;a
+              été débité.
             </p>
+            {orderId && <p>Référence : {orderId}</p>}
             <button className="btn primary wide" type="button" onClick={onClose}>
               Continuer mes achats
             </button>
@@ -206,66 +176,9 @@ export function ShopCart({
         ) : step === "payment" ? (
           <form className="shopcart-pay" onSubmit={pay} noValidate>
             <p className="shopcart-pay-note">
-              Paiement de démonstration — aucune donnée n&apos;est envoyée.
+              La commande sera enregistrée dans ton compte. Aucun paiement ne sera
+              effectué maintenant.
             </p>
-
-            <label className="shopcart-field">
-              <span>Nom complet</span>
-              <input
-                autoComplete="cc-name"
-                placeholder="Peter Parker"
-                value={form.name}
-                onChange={(event) => update("name", event.target.value)}
-              />
-            </label>
-
-            <label className="shopcart-field">
-              <span>Email</span>
-              <input
-                type="email"
-                autoComplete="email"
-                placeholder="peter@dailybugle.com"
-                value={form.email}
-                onChange={(event) => update("email", event.target.value)}
-              />
-            </label>
-
-            <label className="shopcart-field">
-              <span>Numéro de carte</span>
-              <input
-                inputMode="numeric"
-                autoComplete="cc-number"
-                placeholder="4242 4242 4242 4242"
-                value={form.card}
-                onChange={(event) => updateCard(event.target.value)}
-              />
-            </label>
-
-            <div className="shopcart-pay-row">
-              <label className="shopcart-field">
-                <span>Expiration</span>
-                <input
-                  inputMode="numeric"
-                  autoComplete="cc-exp"
-                  placeholder="MM/AA"
-                  value={form.exp}
-                  onChange={(event) => updateExp(event.target.value)}
-                />
-              </label>
-              <label className="shopcart-field">
-                <span>CVC</span>
-                <input
-                  inputMode="numeric"
-                  autoComplete="cc-csc"
-                  placeholder="123"
-                  value={form.cvc}
-                  onChange={(event) =>
-                    update("cvc", event.target.value.replace(/\D/g, "").slice(0, 4))
-                  }
-                />
-              </label>
-            </div>
-
             <div className="shopcart-pay-summary">
               <span>
                 {count} article{count > 1 ? "s" : ""}
@@ -279,12 +192,13 @@ export function ShopCart({
               </p>
             )}
 
-            <button className="btn primary wide" type="submit">
-              Confirmer la commande
+            <button className="btn primary wide" type="submit" disabled={saving}>
+              {saving ? "Enregistrement…" : "Enregistrer la commande"}
             </button>
             <button
               className="btn sline"
               type="button"
+              disabled={saving}
               onClick={() => {
                 setError("");
                 setStep("cart");
@@ -292,7 +206,7 @@ export function ShopCart({
             >
               Retour au panier
             </button>
-            <p className="shopcart-secure">Démo front-end · pas de backend</p>
+            <p className="shopcart-secure">Commande liée à ton compte</p>
           </form>
         ) : (
           <>

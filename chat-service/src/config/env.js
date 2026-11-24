@@ -14,7 +14,7 @@ function parseOrigins(value) {
 
 const env = Object.freeze({
   nodeEnv: process.env.NODE_ENV || "development",
-  port: toPositiveInt(process.env.PORT, 3002),
+  port: toPositiveInt(process.env.PORT, 3003),
   mongoUri: process.env.MONGO_URI || "mongodb://localhost:27017/heroverse_chat",
   corsOrigins: parseOrigins(process.env.CORS_ORIGIN),
   jwtIssuer: process.env.JWT_ISSUER || "heroverse-auth",
