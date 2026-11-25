@@ -1,0 +1,190 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      POSTGRES_DB: ${POSTGRES_DB:-heroverse_auth}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-heroverse_auth}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - heroverse-network
+    restart: unless-stopped
+
+  auth-migrate:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-admin123}@postgres:5432/${POSTGRES_DB:-heroverse_auth}?schema=public
+    command: ["npx", "prisma", "migrate", "deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - heroverse-network
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-admin123}@postgres:5432/${POSTGRES_DB:-heroverse_auth}?schema=public
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      JWT_ISSUER: ${JWT_ISSUER:-heroverse-auth}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-heroverse-services}
+      JWT_PRIVATE_KEY_PATH: ${JWT_PRIVATE_KEY_PATH:-./keys/private.pem}
+      JWT_PUBLIC_KEY_PATH: ${JWT_PUBLIC_KEY_PATH:-./keys/public.pem}
+      ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
+      REFRESH_TOKEN_TTL_SECONDS: ${REFRESH_TOKEN_TTL_SECONDS:-604800}
+      REFRESH_COOKIE_NAME: ${REFRESH_COOKIE_NAME:-heroverse_refresh}
+    ports:
+      - "${AUTH_PORT:-3001}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-migrate:
+        condition: service_completed_successfully
+    networks:
+      - heroverse-network
+    restart: unless-stopped
+
+  mongo-chat:
+    image: mongo:7
+    ports:
+      - "${CHAT_MONGO_PORT:-27018}:27017"
+    volumes:
+      - chat_mongo_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' | grep 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - heroverse-network
+    restart: unless-stopped
+
+  chat-service:
+    build:
+      context: ./chat-service
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      MONGO_URI: mongodb://mongo-chat:27017/${CHAT_MONGO_DB:-heroverse_chat}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      JWT_ISSUER: ${JWT_ISSUER:-heroverse-auth}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-heroverse-services}
+      JWT_PUBLIC_KEY_PATH: /app/keys/public.pem
+      MESSAGE_HISTORY_LIMIT: ${MESSAGE_HISTORY_LIMIT:-100}
+    ports:
+      - "${CHAT_PORT:-3002}:3002"
+    volumes:
+      - type: bind
+        source: ./auth-service/keys/public.pem
+        target: /app/keys/public.pem
+        read_only: true
+    depends_on:
+      mongo-chat:
+        condition: service_healthy
+    networks:
+      - heroverse-network
+    restart: unless-stopped
+
+  mongo-shop:
+    image: mongo:8
+    environment:
+      MONGO_INITDB_DATABASE: ${SHOP_MONGO_DB:-heroverse_shop}
+    ports:
+      - "${SHOP_MONGO_PORT:-27017}:27017"
+    volumes:
+      - shop_mongo_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok' localhost:27017/${SHOP_MONGO_DB:-heroverse_shop} | grep 1",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - heroverse-network
+    restart: unless-stopped
+
+  shop-service:
+    build:
+      context: ./shop-service
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3003
+      MONGO_URI: mongodb://mongo-shop:27017/${SHOP_MONGO_DB:-heroverse_shop}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      JWT_ISSUER: ${JWT_ISSUER:-heroverse-auth}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-heroverse-services}
+      JWT_PUBLIC_KEY_PATH: /app/keys/public.pem
+    ports:
+      - "${SHOP_PORT:-3003}:3003"
+    volumes:
+      - type: bind
+        source: ./auth-service/keys
+        target: /app/keys
+        read_only: true
+    depends_on:
+      mongo-shop:
+        condition: service_healthy
+    networks:
+      - heroverse-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_AUTH_API_URL: ${VITE_AUTH_API_URL:-http://localhost:3001}
+        VITE_CHAT_API_URL: ${VITE_CHAT_API_URL:-http://localhost:3002}
+        VITE_SHOP_API_URL: ${VITE_SHOP_API_URL:-http://localhost:3003}
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      chat-service:
+        condition: service_healthy
+      shop-service:
+        condition: service_healthy
+    networks:
+      - heroverse-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  chat_mongo_data:
+  shop_mongo_data:
+
+networks:
+  heroverse-network:
+    driver: bridge

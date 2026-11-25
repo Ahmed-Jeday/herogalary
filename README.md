@@ -139,13 +139,14 @@ herogalary-master/
 │  ├─ README.md
 │  └─ .env.example
 ├─ docker-compose.yml         # Frontend only
+├─ docker-compose.global.yml  # Frontend, APIs and databases
 ├─ Dockerfile                 # Frontend build (Vite → Nginx)
 ├─ nginx.conf
 ├─ .env.example               # VITE_* API URLs
 └─ package.json
 ```
 
-> The repository contains **one Compose file per backend service**. The root `docker-compose.yml` builds only the frontend. Running `docker compose up` at the repository root does **not** start the three APIs.
+> The existing Compose files remain available for running services individually. The root `docker-compose.yml` still builds only the frontend; use `docker-compose.global.yml` to start the full stack.
 
 ---
 
@@ -197,6 +198,22 @@ auth-service/keys/public.pem
 ```
 
 > `keys/` is ignored by Git. The Dockerfile copies it, and the chat/shop containers mount `public.pem` at runtime, so **generate the keys before building the images**.
+
+### Démarrer toute la stack
+
+Depuis la racine du dépôt, démarrez le frontend, les trois APIs et leurs bases de données avec :
+
+```bash
+docker compose -f docker-compose.global.yml up -d --build
+```
+
+PostgreSQL et les deux MongoDB utilisent des volumes persistants. Pour arrêter les conteneurs sans supprimer les données :
+
+```bash
+docker compose -f docker-compose.global.yml down
+```
+
+Les étapes suivantes décrivent l'option existante pour démarrer chaque service séparément.
 
 ### 3. Start the auth service and PostgreSQL
 
@@ -959,9 +976,9 @@ curl http://localhost:3003/health
 
 ## Known limitations
 
-- **No global Compose file for the backends.** Each service has its own `docker-compose.yml`; the root Compose file only builds the frontend.
+- **Separate Compose files remain supported.** Each service has its own `docker-compose.yml`; use `docker-compose.global.yml` for a single full-stack startup.
 - **Local auth port differs from Docker.** `auth-service` defaults to `4000` locally and `3001` in Docker. Set `PORT=3001` or adjust `VITE_AUTH_API_URL`.
-- **Chat MongoDB is not exposed** by its Compose file. Use `docker exec` or add a port mapping.
+- **Chat MongoDB is not exposed** by its individual Compose file. The global Compose file publishes it on port `27018` by default.
 - **Presence is stored in memory.** The chat service assumes a single instance; a multi-instance deployment would need a Redis adapter.
 - **Socket.IO authenticates at handshake only.** After the 15-minute access token expires, the client must reconnect with a fresh token.
 - **Vite environment variables are build-time constants**, not runtime configuration.
