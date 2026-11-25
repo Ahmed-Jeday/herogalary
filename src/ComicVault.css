@@ -4,6 +4,7 @@
   --ink:#15110E;
   --muted:#7A6B55;
   --accent:#D7261E;
+  --hot:#FF2D6F;
   --yellow:#FFC914;
   --rule:rgba(21,17,14,.92);
   --ease:cubic-bezier(.2,.8,.2,1);
@@ -38,6 +39,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0}
 .topbar>*{pointer-events:auto}
 .topbar .left{justify-self:start}
 .topbar .right{justify-self:end}
+.topbar-right{justify-self:end;display:flex;flex-direction:column;align-items:flex-end;gap:9px}
 .logo{display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--accent);text-decoration:none}
 .logo .cn{font-family:var(--comic);font-size:28px;line-height:1;letter-spacing:.06em;text-shadow:2px 2px 0 var(--ink)}
 .logo .en{font-family:var(--sans);font-weight:600;font-size:8.5px;line-height:1;letter-spacing:.3em;padding-left:.3em;color:var(--ink)}
@@ -129,4 +131,26 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0}
 .watch:disabled{background:var(--muted);box-shadow:4px 4px 0 var(--ink);cursor:not-allowed}
 .dright{align-self:center;justify-self:center;height:min(100%,78vh);display:flex;align-items:center;justify-content:center}
 .dright svg{height:min(100%,78vh);width:auto;max-width:100%;display:block}
+}
+
+/* Common navigation between standalone pages (shop-style variant). */
+.comic-vault .page-nav{display:flex;align-items:stretch;gap:5px;padding:4px;max-width:100%;overflow-x:auto;scrollbar-width:none;background:var(--paper);border:3px solid var(--ink);box-shadow:5px 5px 0 var(--hot);pointer-events:auto}
+.comic-vault .page-nav::-webkit-scrollbar{display:none}
+.comic-vault .page-nav-item{padding:6px 9px;border:0;background:transparent;color:var(--ink);font-family:var(--comic);font-size:16px;line-height:1;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;transition:background-color .2s,color .2s}
+.comic-vault .page-nav-item:hover{background:var(--yellow)}
+.comic-vault .page-nav-item.is-active{background:var(--ink);color:var(--yellow)}
+.comic-vault .page-nav-item:focus-visible{outline:3px solid var(--hot);outline-offset:-3px}
+@media (max-width:1100px){
+  .comic-vault .page-nav-item{font-size:13px;padding:6px 8px}
+}
+@media (max-width:960px){
+  .comic-vault .topbar-right>.lbl{display:none}
+  .comic-vault .page-nav-item{font-size:11px;padding:6px 6px}
+}
+@media (max-width:800px){
+  .comic-vault .page-nav-item{font-size:10px;padding:5px 5px}
+}
+@media (max-width:700px){
+  .comic-vault .topbar-right{position:absolute;left:16px;right:16px;top:84px;align-items:center;gap:0}
+  .comic-vault .page-nav-item{font-size:11px;padding:5px 6px}
 }

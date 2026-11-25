@@ -134,7 +134,11 @@ export default function App() {
       </main>
 
       {activeSection === 2 && (
-        <ComicVault onRead={setReadingComic} onExit={() => setActiveSection(1)} />
+        <ComicVault
+          onRead={setReadingComic}
+          onExit={() => setActiveSection(1)}
+          onNavigateSection={setActiveSection}
+        />
       )}
       {activeSection === 3 && (
         <ShopSection
@@ -145,6 +149,7 @@ export default function App() {
           onSetQty={catalog.setShopQty}
           onClearCart={catalog.clearShopCart}
           onCheckout={handleShopCheckout}
+          onNavigateSection={setActiveSection}
         />
       )}
       {activeSection === 4 && (

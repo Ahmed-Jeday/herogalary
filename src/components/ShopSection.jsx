@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Shelf, ShopCart, SiteUiProvider, StoreGrid } from '../shared/shop-section';
 import shopStyles from '../shared/shop-section/styles/twilight-shop.css?inline';
+import PageNav from './PageNav';
 
 /**
  * Wraps the reusable shop package inside the single-page app.
@@ -15,6 +16,7 @@ export default function ShopSection({
   onSetQty,
   onClearCart,
   onCheckout,
+  onNavigateSection,
 }) {
   const [view, setView] = useState('shelf');
   const [cartOpen, setCartOpen] = useState(false);
@@ -51,6 +53,7 @@ export default function ShopSection({
     <>
       <style>{shopStyles}</style>
       <div className="shop-section" ref={scrollerRef}>
+        <PageNav variant="shop" active={3} onNavigate={onNavigateSection} />
         <SiteUiProvider
           onAddToCart={onAddToCart}
           onOpenStore={openStore}

@@ -1,4 +1,5 @@
 import { useRef, useEffect } from "react";
+import PageNav from "./PageNav";
 import "../ComicVault.css";
 
 /* =========================================================
@@ -46,7 +47,7 @@ function relIndex(v, sc) {
 /* =========================================================
    COMPONENT
    ========================================================= */
-export default function ComicVault({ onRead, onExit }) {
+export default function ComicVault({ onRead, onExit, onNavigateSection }) {
   const stageRef      = useRef(null);
   const shelfRef      = useRef(null);
   const tabsRef       = useRef(null);
@@ -562,7 +563,10 @@ export default function ComicVault({ onRead, onExit }) {
           <span className="cn">COMIC VAULT</span>
           <span className="en">BIBLIOTHÈQUE DE COMICS</span>
         </a>
-        <span className="lbl right">Collection 1940–2027</span>
+        <div className="topbar-right">
+          <span className="lbl">Collection 1940–2027</span>
+          <PageNav variant="comic" active={2} onNavigate={onNavigateSection} />
+        </div>
       </header>
 
       <nav className="tabs" aria-label="Décennies" ref={tabsRef}>

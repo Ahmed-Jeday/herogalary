@@ -1649,7 +1649,7 @@ dialog h3 {
   min-height: 100vh;
   background: var(--paper);
   color: var(--black);
-  padding: 56px var(--gutter) 96px;
+  padding: 84px var(--gutter) 96px;
 }
 .storepage::before {
   content: "";
@@ -2275,5 +2275,57 @@ dialog h3 {
   }
   .shopcart-pay-summary strong {
     font-size: 26px;
+  }
+}
+
+/* Common navigation between standalone pages (shop variant). */
+.shop-section .page-nav {
+  position: fixed;
+  z-index: 40;
+  top: 12px;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px;
+  max-width: calc(100vw - 24px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--paper);
+  border: 3px solid var(--black);
+  box-shadow: 5px 5px 0 var(--hot);
+}
+.shop-section .page-nav::-webkit-scrollbar {
+  display: none;
+}
+.shop-section .page-nav-item {
+  flex: none;
+  padding: 6px 9px;
+  border: 0;
+  background: transparent;
+  color: var(--black);
+  font: 400 19px/1 var(--display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.shop-section .page-nav-item:hover {
+  background: var(--yellow);
+}
+.shop-section .page-nav-item.is-active {
+  background: var(--black);
+  color: var(--yellow);
+}
+.shop-section .page-nav-item:focus-visible {
+  outline: 3px solid var(--hot);
+  outline-offset: -3px;
+}
+@media (max-width: 620px) {
+  .shop-section .page-nav-item {
+    font-size: 15px;
+    padding: 5px 7px;
   }
 }
