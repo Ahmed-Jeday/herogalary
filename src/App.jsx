@@ -117,8 +117,16 @@ export default function App() {
       >
         <Scene engineRef={engineRef} onOpenExperiment={handleOpenExperiment} />
 
-        <Nav onGrid={toggleGrid} onProfile={() => setActiveSection(5)} />
-
+<Nav
+  active={activeSection}
+  onNavigate={(section) => {
+    if (section === 1) {
+      toggleGrid();           // Films = toggle liste/grille
+      return;
+    }
+    setActiveSection(section);
+  }}
+/>
         <Logo />
 
         <Footer sfxOn={sfxOn} onToggleSfx={toggleSfx} onHub={handleHub} cartCount={cartCount} onCart={() => toast(`PANIER · ${cartCount} ARTICLE${cartCount > 1 ? 'S' : ''}`)} />

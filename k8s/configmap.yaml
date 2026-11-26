@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: heroverse
+data:
+  CORS_ORIGIN: http://heroverse.local
+  JWT_ISSUER: heroverse-auth
+  JWT_AUDIENCE: heroverse-services

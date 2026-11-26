@@ -974,6 +974,44 @@ curl http://localhost:3003/health
 
 ---
 
+K8S
+HeroVerse/
+│
+├── k8s/
+│   │
+│   ├── namespace.yaml
+│   │
+│   ├── frontend/
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   │
+│   ├── auth/
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   │
+│   ├── chat/
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   │
+│   ├── shop/
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   │
+│   ├── databases/
+│   │   ├── postgres-deployment.yaml
+│   │   ├── postgres-service.yaml
+│   │   ├── postgres-pvc.yaml
+│   │   ├── chat-mongo-deployment.yaml
+│   │   ├── chat-mongo-service.yaml
+│   │   ├── chat-mongo-pvc.yaml
+│   │   ├── shop-mongo-deployment.yaml
+│   │   ├── shop-mongo-service.yaml
+│   │   └── shop-mongo-pvc.yaml
+│   │
+│   ├── configmap.yaml
+│   └── secrets.yaml cree fichie que n'exite pas sans ajoute aucun code [k8s](directory;file:///c%3A/Users/ahmed/OneDrive/Bureau/HeroVerse/k8s) 
+
+
 ## Known limitations
 
 - **Separate Compose files remain supported.** Each service has its own `docker-compose.yml`; use `docker-compose.global.yml` for a single full-stack startup.

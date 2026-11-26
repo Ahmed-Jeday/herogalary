@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Kubernetes secrets with real values must not be committed.
+/k8s/secrets.yaml

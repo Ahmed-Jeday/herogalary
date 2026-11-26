@@ -1,0 +1,56 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: heroverse
+  namespace: heroverse
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: heroverse.local
+      http:
+        paths:
+          - path: /api/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: auth
+                port:
+                  number: 3001
+          - path: /api/dashboard
+            pathType: Prefix
+            backend:
+              service:
+                name: auth
+                port:
+                  number: 3001
+          - path: /api/rooms
+            pathType: Prefix
+            backend:
+              service:
+                name: chat
+                port:
+                  number: 3002
+          - path: /socket.io
+            pathType: Prefix
+            backend:
+              service:
+                name: chat
+                port:
+                  number: 3002
+          - path: /api/orders
+            pathType: Prefix
+            backend:
+              service:
+                name: shop
+                port:
+                  number: 3003
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

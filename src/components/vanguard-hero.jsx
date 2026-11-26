@@ -50,7 +50,7 @@ function GetInTouchButton({ className = '' }) {
         <button
           type="button"
           onClick={handleLogout}
-          className="font-inter text-[10px] uppercase tracking-widest text-white/60 transition hover:text-white"
+          className=""
         >
           Déconnexion
         </button>
