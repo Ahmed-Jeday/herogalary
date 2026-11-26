@@ -1,41 +1,67 @@
-# Rapport d’analyse Kubernetes
+# Rapport d'analyse Kubernetes
 
-## Résumé
+## Portee de la revue
 
-Le dossier `k8s/` contient les ressources principales pour exécuter le frontend, les trois API et les bases de données. Il constitue une bonne base de développement, mais **n’est pas prêt à être appliqué tel quel** : les secrets sont des exemples, la construction du frontend doit recevoir les URL Kubernetes, et les images sont configurées pour un usage local uniquement.
+Cette version reprend une analyse statique du dossier `k8s/`, des Dockerfiles applicatifs, des routes HTTP exposes par les trois API, du frontend et de sa configuration Nginx.
 
-Les manifestes n’ont pas pu être vérifiés avec `kubectl` dans l’environnement d’analyse : `kubectl`, Docker, Minikube et Kind n’y sont pas installés. Les observations ci-dessous sont une revue statique des manifestes et des configurations applicatives.
+Les 23 documents YAML du dossier ont ete parses avec un parseur YAML. Tous les fichiers sont syntaxiquement valides. Une validation Kubernetes avec `kubectl`, ainsi qu'un deploiement reel, n'ont pas pu etre effectues dans l'environnement actuel : `kubectl`, Docker, Minikube et Kind sont absents.
 
-## Défauts et corrections recommandées
+## Etat actuel
 
-| Priorité | Sujet | Constat et impact | Correction |
+Le dossier peut servir de base locale de demonstration. Les corrections suivantes sont deja presentes dans les fichiers actuels :
+
+- les images auth, chat, shop et frontend ont des ressources Kubernetes distinctes ;
+- auth utilise un Secret pour ses chemins de cle privee et publique ;
+- la migration Prisma est separee du Deployment auth dans `k8s/auth/migrate-job.yaml` ;
+- le frontend, les API et les bases ont des sondes de demarrage, readiness ou liveness ;
+- PostgreSQL et les deux MongoDB utilisent des PVC ;
+- les ressources applicatives sont regroupes dans le namespace `heroverse`.
+
+Le projet n'est cependant pas pret pour un environnement partage ou de production.
+
+## Constats prioritaires
+
+| Priorite | Sujet | Constat verifie | Action |
 |---|---|---|---|
-| Bloquant | Secrets et clés JWT | [`k8s/secrets.example.yaml`](./k8s/secrets.example.yaml) contient des valeurs d’exemple et ne doit pas servir de configuration réelle. Les pods auth, chat et shop ont besoin des secrets `db-secret` et `jwt-keys`. Sans vraies clés correspondantes, auth ne peut pas signer les JWT et chat/shop ne peuvent pas les vérifier. | Créer un vrai `db-secret` avec le mot de passe PostgreSQL et une URL `DATABASE_URL` cohérente, puis un `jwt-keys` depuis les deux fichiers PEM générés. Ne jamais committer les valeurs réelles. |
-| Élevé | Clé privée intégrée à l’image auth | [`auth-service/Dockerfile`](./auth-service/Dockerfile) copiait `keys/` dans les étapes build et runtime : si une paire réelle existait au moment du build, la clé privée se retrouvait dans les couches de l’image. **Corrigé** : les deux instructions `COPY` ont été supprimées, et la configuration Compose locale monte désormais `auth-service/keys` en lecture seule. | La clé est fournie uniquement au runtime (volume Secret Kubernetes, bind mount Compose local). Ne jamais réintroduire `COPY keys/` dans le Dockerfile ni committer les PEM. |
-| Bloquant | URL API du frontend | Le Dockerfile racine utilise par défaut `http://localhost:3001`, `:3002` et `:3003`. Les variables Vite sont intégrées à la compilation et ne sont pas modifiées par le Deployment. Depuis le navigateur d’un utilisateur, `localhost` désigne son propre poste : les appels API et le socket échouent. | Construire `heroverse/frontend:1.0` en passant les trois `VITE_*_API_URL` avec l’hôte Ingress, par exemple `http://heroverse.local`. Utiliser `https://` si TLS est activé. |
-| Élevé | Images `imagePullPolicy: Never` | Les Deployments auth, chat, shop et frontend exigent que l’image existe déjà sur chaque nœud. Ils ne fonctionneront pas avec des images uniquement présentes dans un registre distant. | Pour un cluster local, construire puis charger les images sur le cluster (commandes ci-dessous). Pour un cluster distant, pousser les images dans un registre, utiliser un tag versionné et remplacer `Never` par `IfNotPresent` ou `Always`. |
-| Élevé | Migrations PostgreSQL | `prisma migrate deploy` était exécuté comme init container de chaque pod auth, sans garantie que PostgreSQL soit prêt et en couplant la migration au cycle de vie des réplicas. **Corrigé** : un Job dédié [`k8s/auth/migrate-job.yaml`](./k8s/auth/migrate-job.yaml) attend la disponibilité de PostgreSQL puis applique les migrations. | Appliquer et attendre la réussite du Job avant de déployer auth (voir « Déployer dans l’ordre »). Pour un usage réel, conserver cette séparation et surveiller l’échec du Job. |
-| Élevé | Santé des services | Les probes auth/shop ciblent `/health`, qui renvoie actuellement OK sans contrôler la base. À l’inverse, la santé chat dépend de MongoDB et sert à la fois de readiness et de liveness : une panne Mongo peut provoquer des redémarrages inutiles. | Séparer les sondes : liveness vérifie que le processus répond ; readiness vérifie aussi la disponibilité des dépendances nécessaires. Ajouter `startupProbe` si le démarrage ou les migrations peuvent prendre du temps. |
-| Élevé | MongoDB sans authentification | [`k8s/databases/chat-mongo-deployment.yaml`](./k8s/databases/chat-mongo-deployment.yaml) et [`k8s/databases/shop-mongo-deployment.yaml`](./k8s/databases/shop-mongo-deployment.yaml) lancent MongoDB sans utilisateur ni mot de passe. Chat et shop y accèdent sur le réseau du cluster sans authentification. Cela convient uniquement à un environnement local/de démonstration isolé. | Pour un environnement partagé ou de production, activer l’authentification MongoDB, stocker les identifiants dans un Secret, puis fournir des URI authentifiées aux Deployments chat et shop. |
-| Moyen | Stockage persistant dépendant du cluster | Les PVC PostgreSQL et MongoDB demandent chacun 1 Gio sans `storageClassName`. Le provisionnement dépend de la StorageClass par défaut du cluster ; sans provisionneur compatible, les pods de base restent bloqués en `Pending`. Aucun mécanisme de sauvegarde n’est défini. | Vérifier les StorageClasses avant déploiement, augmenter les tailles selon les besoins et mettre en place des sauvegardes/restaurations testées. Un PVC n’est pas une sauvegarde. |
-| Moyen | Bases de données à instance unique | PostgreSQL et MongoDB n’ont qu’un seul replica. Une panne ou une mise à jour de leur pod interrompt le service ; `Recreate` et les PVC `ReadWriteOnce` ne fournissent pas de haute disponibilité. | Pour un usage réel, externaliser les bases vers des services managés ou adopter une architecture StatefulSet/cluster opérée et supervisée. |
-| Moyen | TLS Ingress absent | [`k8s/ingress.yaml`](./k8s/ingress.yaml) ne déclare ni TLS ni certificat : le trafic est en HTTP et l’hôte est `heroverse.local`. | Pour un accès autre que local, configurer DNS, TLS (par exemple cert-manager), l’hôte réel et l’origine CORS correspondante. |
-| Moyen | Configuration runtime limitée | Les Deployments applicatifs définissent peu de paramètres opérationnels ; MongoDB n’a ni limites CPU/mémoire ni liveness probe. Les limites configurées pour les API et le frontend sont de bons débuts, mais ne remplacent pas la supervision. | Définir requests/limits adaptés pour les bases, des probes adaptées, des règles de journalisation et des alertes. Vérifier les besoins réels avant de fixer les quotas en production. |
+| Bloquante | Secrets d'exemple | `k8s/secrets.example.yaml` contient des valeurs a remplacer. Le namespace ne contient pas automatiquement le Secret `jwt-keys` ni le Secret `db-secret`. | Ne pas appliquer le modele tel quel. Creer les Secrets reels avec `kubectl` ou un gestionnaire de secrets, puis appliquer uniquement les manifestes de configuration. |
+| Bloquante | PostgreSQL et DATABASE_URL | PostgreSQL utilise `POSTGRES_PASSWORD` depuis `db-secret`. Auth utilise `DATABASE_URL` depuis le meme Secret. Les deux valeurs doivent correspondre au meme mot de passe et a la meme base `heroverse_auth`. | Creer `db-secret` avant PostgreSQL, auth et le Job de migration. Encoder les caracteres reserves du mot de passe dans l'URI PostgreSQL. |
+| Bloquante | Clés JWT | Le Secret `jwt-keys` est monte dans `/keys` par auth, chat et shop. Une cle publique est necessaire aux trois API ; seule auth necessite la cle privee. Le Dockerfile auth ne copie plus `keys/` dans ses couches. | Conserver une paire existante si des jetons ont deja ete emis. Ne jamais committer les PEM ni les integrer aux images. |
+| Bloquante | URL du frontend | Les variables Vite sont injectees au build, pas au demarrage du container. Les valeurs par defaut du Dockerfile racine sont `localhost:3001`, `3002` et `3003`, donc l'adresse locale du navigateur de l'utilisateur est utilisee. | Construire l'image avec des URL publiques ou avec l'origine `http://heroverse.local`, puis recompiler l'image apres tout changement de domaine. |
+| Haute | Images locales | Tous les Deployments applicatifs utilisent `imagePullPolicy: Never` et les tags `heroverse/*:1.0`. La migration utilise egalement ces tags locaux. | Pour Minikube ou Kind, construire puis charger les quatre images locales. Pour un registre, pousser les images, utiliser des tags immuables et remplacer `Never` par `IfNotPresent` ou `Always`. |
+| Haute | Auth MongoDB | Chat et shop configurent des URI sans identifiants vers `chat-mongo` et `shop-mongo`. Les deux bases MongoDB demarrent sans authentification. | Pour tout environnement partage, activer l'initiation MongoDB avec utilisateur/mot de passe, stocker les URI authentifiees dans un Secret et redemarrer les deux services. |
+| Haute | Ingress HTTP | `k8s/ingress.yaml` expose uniquement `heroverse.local` en HTTP. Il ne configure ni TLS ni DNS. | Configurer un hote public, un DNS stable, TLS/cert-manager si necessaire et une `CORS_ORIGIN` correspondant exactement a l'origine publique. |
+| Haute | Disponibilite des bases | PostgreSQL, chat-mongo et shop-mongo ont un seul replica. Chaque PVC est en `ReadWriteOnce` et utilise la StorageClass par défaut. `Recreate` evite les montages simultanes mais n'assure aucune haute disponibilite. | Valider la StorageClass, les capacites et les strategies de sauvegarde. Prevoir une base externe geree ou un cluster opere pour la production. |
+| Moyenne | Journalisation et ressources | Les bases disposent de probes mais pas de sauvegarde ni de gestion des donnees testee. MongoDB n'avait pas de stratégie de persistance supplementaire en dehors du PVC. | Ajouter supervision, sauvegardes/restaurations testees, retention des logs, quotas par namespace et alertes. |
+| Moyenne | Liveness du service auth | La livenessProbe auth est TCP au niveau du processus. La readinessProbe `/health` repond OK sans verifier PostgreSQL. | Conserver cette separation pour la disponibilite locale, puis ajouter dans l'application une readiness distincte qui controle Prisma/PostgreSQL. |
+| Moyenne | Liveness du service shop | Shop utilise une readiness `/health` sans verification MongoDB et une liveness TCP independante. | Ajouter une readiness basee sur la connexion MongoDB, tout en conservant une liveness qui ne depend pas de MongoDB. |
+| Moyenne | Chat Socket.IO | Chat expose `/socket.io` via l'Ingress avec des timeouts de 3600 secondes. Les probes chat utilisent TCP pour la liveness et `/health` pour la readiness. | Valider WebSocket et les headers Nginx sur le controleur Ingress cible. Ajouter les annotations necessaires si le controleur utilise un comportement restrictif par defaut. |
 
-### Détails de configuration
+## Points verifies dans le code applicatif
 
-- L’Ingress utilise des noms de Services et ports présents dans les manifestes. Il route les chemins API sans réécriture, ce qui correspond aux routes `/api/...` des applications. Les timeouts longs sont cohérents avec Socket.IO ; il faut néanmoins valider la connexion WebSocket dans le cluster cible.
-- `CORS_ORIGIN` vaut `http://heroverse.local`. Cette valeur doit être exactement l’origine utilisée par le navigateur (schéma, nom et port), et être mise à jour avec l’URL publique ou TLS.
-- Les noms de bases `heroverse_chat` et `heroverse_shop` sont sélectionnés dans les URI des applications. Comme la configuration Compose locale, Kubernetes utilise deux instances MongoDB séparées (`chat-mongo` et `shop-mongo`) avec leur propre PVC, afin de ne pas partager le même domaine de panne.
-- Les manifestes supposent que les images s’appellent exactement `heroverse/auth:1.0`, `heroverse/chat:1.0`, `heroverse/shop:1.0` et `heroverse/frontend:1.0`.
+- Auth expose `/health`, `/api/auth` et `/api/dashboard`.
+- Chat expose `/health`, `/api/rooms` et `/socket.io`.
+- Shop expose `/health` et `/api/orders`.
+- Les chemins de l'Ingress correspondent aux routes backend :
+  - `/api/auth` vers auth ;
+  - `/api/dashboard` vers auth ;
+  - `/api/rooms` vers chat ;
+  - `/socket.io` vers chat ;
+  - `/api/orders` vers shop ;
+  - `/` vers frontend.
+- La CORS de chaque API doit accepter exactement l'origine du navigateur.
+- Les Deployments chat et shop utilisent des URI MongoDB distinctes : `heroverse_chat` et `heroverse_shop`.
 
-## Mise en route locale
+## Deploiement local recommande
 
-Prérequis : un cluster Kubernetes fonctionnel, `kubectl`, Docker, et un contrôleur Ingress NGINX. Pour Minikube, activer l’Ingress avec `minikube addons enable ingress`. Pour Kind, installer un contrôleur Ingress adapté au cluster.
+### 1. Creer le namespace
 
-### 1. Créer les secrets
+```bash
+kubectl apply -f k8s/namespace.yaml
+```
 
-Si une paire de clés JWT valide existe déjà et est utilisée par l’application, la conserver : ne pas la régénérer, sinon les JWT existants ne seront plus vérifiables. Sinon, générer une paire RSA puis créer le Secret Kubernetes à partir des fichiers, sans inclure les clés dans une image :
+### 2. Creer les Secrets
+
+Generer une paire RSA si aucune paire existante ne doit etre conservée :
 
 ```bash
 cd auth-service
@@ -43,29 +69,24 @@ npm ci
 npm run generate:keys
 cd ..
 
-kubectl apply -f k8s/namespace.yaml
 kubectl create secret generic jwt-keys \
   --namespace heroverse \
   --from-file=private.pem=auth-service/keys/private.pem \
-  --from-file=public.pem=auth-service/keys/public.pem \
-  --dry-run=client -o yaml | kubectl apply -f -
+  --from-file=public.pem=auth-service/keys/public.pem
 ```
 
-Créer `db-secret` à partir du modèle, après avoir remplacé ses valeurs par des valeurs réelles. Comme `jwt-keys` a déjà été créé avec les fichiers PEM, supprimer du fichier local le second document YAML `jwt-keys` avant d’appliquer le modèle :
+Créer ensuite `db-secret` depuis des valeurs reelles :
 
 ```bash
-cp k8s/secrets.example.yaml k8s/secrets.yaml
-chmod 600 k8s/secrets.yaml
-# Éditer k8s/secrets.yaml : mot de passe réel et DATABASE_URL cohérente.
-# Format attendu : postgresql://postgres:<mot-de-passe>@postgres:5432/heroverse_auth?schema=public
-kubectl apply -f k8s/secrets.yaml
+kubectl create secret generic db-secret \
+  --namespace heroverse \
+  --from-literal=POSTGRES_PASSWORD='<mot-de-passe-reel>' \
+  --from-literal=DATABASE_URL='postgresql://postgres:<mot-de-passe-encode>@postgres:5432/heroverse_auth?schema=public'
 ```
 
-Le mot de passe dans `DATABASE_URL` doit être le même que `POSTGRES_PASSWORD`. S’il contient des caractères réservés aux URL, il doit être encodé dans l’URL. Le fichier `k8s/secrets.yaml` est ignoré par Git ; le laisser hors du dépôt et ne pas le publier dans un artefact.
+Ne pas appliquer `k8s/secrets.example.yaml` avec ses valeurs d'exemple.
 
-### 2. Construire les images
-
-Avant de construire auth, appliquer la correction au Dockerfile pour ne pas intégrer la clé privée dans l’image. Pour un cluster local avec les images préchargées :
+### 3. Construire et charger les images locales
 
 ```bash
 docker build -t heroverse/auth:1.0 ./auth-service
@@ -79,69 +100,94 @@ docker build \
   -f Dockerfile .
 ```
 
-Charger les quatre images dans le cluster local utilisé :
+Pour Minikube :
 
 ```bash
-# Choisir la commande correspondant au cluster :
 minikube image load heroverse/auth:1.0
 minikube image load heroverse/chat:1.0
 minikube image load heroverse/shop:1.0
 minikube image load heroverse/frontend:1.0
-
-# Pour Kind, remplacer les quatre commandes précédentes par :
-# kind load docker-image heroverse/auth:1.0 heroverse/chat:1.0 \
-#   heroverse/shop:1.0 heroverse/frontend:1.0
 ```
 
-### 3. Déployer dans l’ordre
+Pour Kind :
+
+```bash
+kind load docker-image \
+  heroverse/auth:1.0 \
+  heroverse/chat:1.0 \
+  heroverse/shop:1.0 \
+  heroverse/frontend:1.0
+```
+
+### 4. Appliquer les manifestes dans l'ordre
 
 ```bash
 kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/databases/postgres-pvc.yaml -f k8s/databases/postgres-deployment.yaml -f k8s/databases/postgres-service.yaml
-kubectl apply -f k8s/databases/chat-mongo-pvc.yaml -f k8s/databases/chat-mongo-deployment.yaml -f k8s/databases/chat-mongo-service.yaml
-kubectl apply -f k8s/databases/shop-mongo-pvc.yaml -f k8s/databases/shop-mongo-deployment.yaml -f k8s/databases/shop-mongo-service.yaml
+
+kubectl apply -f k8s/databases/postgres-pvc.yaml
+kubectl apply -f k8s/databases/postgres-deployment.yaml
+kubectl apply -f k8s/databases/postgres-service.yaml
+
+kubectl apply -f k8s/databases/chat-mongo-pvc.yaml
+kubectl apply -f k8s/databases/chat-mongo-deployment.yaml
+kubectl apply -f k8s/databases/chat-mongo-service.yaml
+
+kubectl apply -f k8s/databases/shop-mongo-pvc.yaml
+kubectl apply -f k8s/databases/shop-mongo-deployment.yaml
+kubectl apply -f k8s/databases/shop-mongo-service.yaml
 
 kubectl -n heroverse rollout status deployment/postgres --timeout=180s
 kubectl -n heroverse rollout status deployment/chat-mongo --timeout=180s
 kubectl -n heroverse rollout status deployment/shop-mongo --timeout=180s
+```
 
-# Exécuter et valider les migrations avant le déploiement auth
+Executer les migrations et attendre leur resultat avant de deployer auth :
+
+```bash
 kubectl delete job auth-migrate -n heroverse --ignore-not-found
 kubectl apply -f k8s/auth/migrate-job.yaml
 kubectl -n heroverse wait --for=condition=complete job/auth-migrate --timeout=180s
+```
 
+Puis appliquer les applications :
+
+```bash
 kubectl apply -f k8s/auth/deployment.yaml
-kubectl -n heroverse rollout status deployment/auth --timeout=180s
 kubectl apply -f k8s/auth/service.yaml
-
-kubectl apply -f k8s/chat/deployment.yaml -f k8s/chat/service.yaml
-kubectl apply -f k8s/shop/deployment.yaml -f k8s/shop/service.yaml
-kubectl apply -f k8s/frontend/deployment.yaml -f k8s/frontend/service.yaml
+kubectl apply -f k8s/chat/deployment.yaml
+kubectl apply -f k8s/chat/service.yaml
+kubectl apply -f k8s/shop/deployment.yaml
+kubectl apply -f k8s/shop/service.yaml
+kubectl apply -f k8s/frontend/deployment.yaml
+kubectl apply -f k8s/frontend/service.yaml
 kubectl apply -f k8s/ingress.yaml
 ```
 
-Les migrations sont désormais exécutées par un Job dédié (`k8s/auth/migrate-job.yaml`) qui attend PostgreSQL, et non plus par un init container du Deployment auth.
-
-### 4. Vérifier l’état et accéder à l’application
+### 5. Verifier
 
 ```bash
-kubectl get pods,svc,ingress,pvc -n heroverse
+kubectl get pods,services,ingress,pvc -n heroverse
 kubectl get events -n heroverse --sort-by=.lastTimestamp
+kubectl logs -n heroverse job/auth-migrate
 kubectl logs -n heroverse deployment/auth
 kubectl logs -n heroverse deployment/chat
 kubectl logs -n heroverse deployment/shop
 ```
 
-Faire pointer `heroverse.local` vers l’adresse IP Ingress du cluster (par exemple dans le fichier `hosts` local), puis ouvrir `http://heroverse.local`. Avec Minikube, l’adresse est consultable avec `minikube ip`. Si aucun Ingress n’est installé, tester temporairement un Service avec `kubectl port-forward -n heroverse svc/frontend 8080:80`, puis ouvrir `http://localhost:8080` ; les URL API intégrées au frontend doivent alors aussi être adaptées à cette topologie.
+Faire pointer `heroverse.local` vers l'adresse IP du controleur Ingress, puis ouvrir `http://heroverse.local`. Pour un test temporaire sans Ingress :
 
-Si un pod ne démarre pas, consulter `kubectl describe pod -n heroverse <nom-du-pod>` et les logs du Job de migration avec `kubectl logs -n heroverse job/auth-migrate`.
+```bash
+kubectl port-forward -n heroverse service/frontend 8080:80
+```
 
-## Critères avant usage de production
+Dans ce cas, le frontend doit avoir ete construit avec `http://localhost:8080` ou une URL equivalentement accessible depuis le navigateur.
 
-1. Retirer les clés JWT du Dockerfile et vérifier qu’aucune clé privée n’est publiée dans les images.
-2. Remplacer les secrets d’exemple, protéger leur stockage et définir une procédure de rotation.
-3. Utiliser un registre d’images, des tags immuables et une politique de récupération compatible.
-4. Construire le frontend avec le domaine final, configurer TLS et harmoniser CORS.
-5. Activer l’authentification MongoDB ; définir sauvegardes, restauration et supervision des bases.
-6. Séparer readiness/liveness, exécuter les migrations comme tâche dédiée et valider PVC/StorageClass.
-7. Tester le déploiement complet sur un cluster représentatif avant d’y placer des données réelles.
+## Critères avant production
+
+1. Supprimer toute cle privee des images et proteger les Secrets Kubernetes.
+2. Activer l'authentification PostgreSQL et MongoDB avec des secrets distincts.
+3. Configurer TLS, DNS, CORS et une origine publique stable.
+4. Utiliser un registre d'images, des tags immuables et une strategie `IfNotPresent` ou `Always`.
+5. Choisir une StorageClass adaptée, dimensionner les volumes et tester les sauvegardes/restaurations.
+6. Ajouter readiness/liveness propres aux dependances PostgreSQL et MongoDB.
+7. Tester le deploiement complet sur un cluster compatible avant toute donnée réelle.
