@@ -14,7 +14,6 @@ FROM dependencies AS build
 COPY prisma ./prisma
 COPY scripts ./scripts
 COPY src ./src
-COPY keys ./keys
 RUN npx prisma generate
 
 FROM base AS runtime
@@ -30,7 +29,6 @@ COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/prisma ./prisma
 COPY --from=build --chown=node:node /app/scripts ./scripts
 COPY --from=build --chown=node:node /app/src ./src
-COPY --from=build --chown=node:node /app/keys ./keys
 COPY --chown=node:node package.json package-lock.json ./
 
 USER node

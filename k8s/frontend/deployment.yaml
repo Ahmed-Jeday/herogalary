@@ -13,16 +13,33 @@ spec:
       labels:
         app: frontend
     spec:
+      # The VITE_*_API_URL values are compiled into the image. Build it with
+      # --build-arg VITE_*_API_URL=http://heroverse.local (see k8s.md).
       containers:
         - name: frontend
           image: heroverse/frontend:1.0
+          # Local cluster: image is loaded with `minikube image load` / `kind load`.
           imagePullPolicy: Never
           ports:
             - containerPort: 80
+          startupProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /
               port: 80
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
           resources:
             requests:
               cpu: 25m

@@ -13,21 +13,10 @@ spec:
       labels:
         app: auth
     spec:
-      initContainers:
-        - name: migrate
-          image: heroverse/auth:1.0
-          imagePullPolicy: Never
-          command:
-            - npx
-            - prisma
-            - migrate
-            - deploy
-          envFrom:
-            - secretRef:
-                name: db-secret
       containers:
         - name: auth
           image: heroverse/auth:1.0
+          # Local cluster: image is loaded with `minikube image load` / `kind load`.
           imagePullPolicy: Never
           ports:
             - containerPort: 3001
@@ -43,16 +32,24 @@ spec:
                 name: db-secret
             - configMapRef:
                 name: app-config
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            periodSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /health
               port: 3001
-            initialDelaySeconds: 5
+            periodSeconds: 10
+          # Process-level liveness, independent from PostgreSQL.
           livenessProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: 3001
             initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
           resources:
             requests:
               cpu: 50m

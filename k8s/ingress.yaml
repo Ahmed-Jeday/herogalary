@@ -6,6 +6,8 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+# Local setup: plain HTTP on heroverse.local. For remote access, add a tls:
+# section (cert-manager) and align CORS_ORIGIN with the public origin.
 spec:
   ingressClassName: nginx
   rules:

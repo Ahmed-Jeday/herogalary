@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: auth-migrate
+  namespace: heroverse
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: auth-migrate
+    spec:
+      restartPolicy: Never
+      initContainers:
+        # Wait for PostgreSQL to accept TCP connections before running migrations.
+        - name: wait-for-postgres
+          image: heroverse/auth:1.0
+          imagePullPolicy: Never
+          command:
+            - node
+            - -e
+            - |
+              const net = require("net");
+              const deadline = Date.now() + 120000;
+              const tryConnect = () => {
+                const socket = net.connect(5432, "postgres");
+                socket.on("connect", () => {
+                  console.log("postgres is reachable");
+                  socket.end();
+                  process.exit(0);
+                });
+                socket.on("error", () => {
+                  socket.destroy();
+                  if (Date.now() > deadline) {
+                    console.error("timed out waiting for postgres");
+                    process.exit(1);
+                  }
+                  setTimeout(tryConnect, 2000);
+                });
+              };
+              tryConnect();
+      containers:
+        - name: migrate
+          image: heroverse/auth:1.0
+          imagePullPolicy: Never
+          command:
+            - npx
+            - prisma
+            - migrate
+            - deploy
+          envFrom:
+            - secretRef:
+                name: db-secret

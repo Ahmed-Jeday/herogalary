@@ -16,6 +16,7 @@ spec:
       containers:
         - name: shop
           image: heroverse/shop:1.0
+          # Local cluster: image is loaded with `minikube image load` / `kind load`.
           imagePullPolicy: Never
           ports:
             - containerPort: 3003
@@ -23,22 +24,30 @@ spec:
             - name: PORT
               value: "3003"
             - name: MONGO_URI
-              value: mongodb://mongo:27017/heroverse_shop
+              value: mongodb://shop-mongo:27017/heroverse_shop
             - name: JWT_PUBLIC_KEY_PATH
               value: /keys/public.pem
           envFrom:
             - configMapRef:
                 name: app-config
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3003
+            periodSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /health
               port: 3003
-            initialDelaySeconds: 5
+            periodSeconds: 10
+          # Process-level liveness, independent from MongoDB.
           livenessProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: 3003
             initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
           resources:
             requests:
               cpu: 50m

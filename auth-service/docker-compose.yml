@@ -58,6 +58,9 @@ services:
       REFRESH_COOKIE_NAME: ${REFRESH_COOKIE_NAME:-heroverse_refresh}
     ports:
       - "${AUTH_PORT:-3001}:3001"
+    # Keys are no longer baked into the image: mount them for local runs.
+    volumes:
+      - ./keys:/app/keys:ro
     depends_on:
       postgres:
         condition: service_healthy

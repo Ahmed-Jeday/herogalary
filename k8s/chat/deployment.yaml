@@ -16,6 +16,7 @@ spec:
       containers:
         - name: chat
           image: heroverse/chat:1.0
+          # Local cluster: image is loaded with `minikube image load` / `kind load`.
           imagePullPolicy: Never
           ports:
             - containerPort: 3002
@@ -23,22 +24,26 @@ spec:
             - name: PORT
               value: "3002"
             - name: MONGO_URI
-              value: mongodb://mongo:27017/heroverse_chat
+              value: mongodb://chat-mongo:27017/heroverse_chat
             - name: JWT_PUBLIC_KEY_PATH
               value: /keys/public.pem
           envFrom:
             - configMapRef:
                 name: app-config
+          # /health reports the MongoDB state: use it for readiness only.
           readinessProbe:
             httpGet:
               path: /health
               port: 3002
             initialDelaySeconds: 5
+            periodSeconds: 10
+          # Liveness must not restart the pod when MongoDB is unavailable.
           livenessProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: 3002
             initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
           resources:
             requests:
               cpu: 50m
